@@ -1,0 +1,42 @@
+[package]
+name = "apply-edits"
+version = "0.1.0"
+edition = "2021"
+description = "Apply targeted code edits with multi-line support for www-agent"
+authors = ["www-agent"]
+
+[dependencies]
+# NOTE(jimmylee)
+# serde/serde_json: JSON serialization for input/output
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# NOTE(jimmylee)
+# clap: Command-line argument parsing with derive macros
+clap = { version = "4.4", features = ["derive"] }
+
+# NOTE(jimmylee)
+# strsim: String similarity algorithms (Levenshtein, etc.) for fuzzy matching
+strsim = "0.11"
+
+# NOTE(jimmylee)
+# colored: Terminal colors for human-readable output
+colored = "2.1"
+
+# NOTE(jimmylee)
+# thiserror: Derive macros for error types
+thiserror = "1.0"
+
+# NOTE(angeldev)
+# memmap2: Memory-mapped file I/O for large files
+memmap2 = "0.9"
+
+[profile.release]
+# NOTE(jimmylee)
+# Optimize for speed and small binary size
+opt-level = 3
+lto = true
+strip = true
+
+[dev-dependencies]
+tempfile = "3.24.0"

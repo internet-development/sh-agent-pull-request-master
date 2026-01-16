@@ -1,0 +1,43 @@
+.next
+.tmp/*
+!.tmp/.gitkeep
+.nova
+.env
+.env.local
+.env-custom-development
+.env-development
+.env-textile
+.env-production
+.DS_STORE
+.vscode
+.vscode/**/*
+DS_STORE
+yarn.lock
+node_modules
+dist
+analytics.txt
+package-lock.json
+
+/**/*/.DS_STORE
+/**/*/node_modules
+/**/*/.next
+/**/*/.data
+
+# Agent state (keep .gitkeep files)
+.state/*
+!.state/.gitkeep
+.context/*
+!.context/.gitkeep
+.claude/*
+
+# Cloned target repositories (working directory)
+.workrepo/
+
+# Legacy folders (for migration)
+state/*
+!state/.gitkeep
+memory/*
+!memory/.gitkeep
+
+# Rust build artifacts (tools are built on first run)
+tools/*/target/
