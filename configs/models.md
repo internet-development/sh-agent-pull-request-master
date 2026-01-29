@@ -37,3 +37,28 @@
   }
 }
 ```
+
+---
+
+## Model Compatibility Notes (2025–2026)
+
+### Provider Stability
+
+| Provider | Status | Notes |
+|----------|--------|-------|
+| Anthropic | Stable | Claude models are well-supported. Check for region-based routing if experiencing latency. |
+| OpenAI | Stable | Models are versioned; older versions may be deprecated with limited notice. |
+| Google | Requires Setup | May require quota project ID configuration for higher rate limits. |
+
+### Recommendations
+
+- **Pin model versions** in your configuration when possible (e.g., `claude-3-opus-20240229` rather than `claude-3-opus`)
+- **Monitor deprecation notices** from providers—model availability can change
+- **Test API connectivity** with `./agent.sh test-models` before long runs
+- **Have fallback keys** if using multiple providers
+
+### Known Limitations
+
+- Model responses are non-deterministic; the same prompt may produce different outputs
+- Rate limits vary by provider and subscription tier
+- Some models have context length limits that may truncate large file contents
