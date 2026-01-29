@@ -247,7 +247,27 @@ implement_changes() {
         existing_files_context=$(read_existing_files "$files_likely_affected")
     fi
 
-    local prompt="## Implementation Requirements
+    local prompt="# ⛔ CRITICAL: OUTPUT FORMAT
+
+You MUST output ONLY a JSON code block. NO text before. NO text after.
+
+\`\`\`json
+{
+  \"edits\": [...],
+  \"commit_message\": \"...\",
+  \"summary\": \"...\"
+}
+\`\`\`
+
+WRONG (will fail):
+- Any text before the JSON block
+- Any explanation after the JSON block
+- Multiple JSON blocks
+- JSON without the \`\`\`json wrapper
+
+---
+
+## Implementation Requirements
 
 ${requirements_json}
 
@@ -414,7 +434,23 @@ BEFORE OUTPUT: For each search string, mentally verify:
 
 ## Task
 
-Implement the requirements using targeted edits. Be surgical and precise."
+Implement the requirements using targeted edits. Be surgical and precise.
+
+# ⛔ FINAL REMINDER: OUTPUT ONLY JSON
+
+Your response must be EXACTLY:
+
+\`\`\`json
+{
+  \"edits\": [
+    {\"path\": \"...\", \"type\": \"...\", ...}
+  ],
+  \"commit_message\": \"feat(scope): description\",
+  \"summary\": \"What was implemented\"
+}
+\`\`\`
+
+NO other text. Start with \`\`\`json, end with \`\`\`. Nothing else."
 
     invoke_persona "engineer" "$prompt"
 }
@@ -423,7 +459,7 @@ Implement the requirements using targeted edits. Be surgical and precise."
 # Applies code changes from Engineer's JSON output to actual files.
 apply_code_changes() {
     local engineer_response="$1"
-    
+
     # Reset global result variable
     APPLY_RESULT_JSON=""
 
@@ -432,15 +468,39 @@ apply_code_changes() {
         return 1
     fi
 
-    # Extract JSON from markdown code block if present
+    # Extract JSON using robust multi-strategy extraction
     local changes_json
     changes_json=$(extract_json "$engineer_response")
 
-    # Validate JSON before proceeding
-    if ! echo "$changes_json" | jq empty 2>/dev/null; then
-        log_error "APPLY" "Failed to parse Engineer's JSON output"
-        log_error "APPLY" "Response preview: ${engineer_response:0:500}"
-        return 1
+    # If extraction failed, log verbose details and try repair
+    if [[ -z "$changes_json" ]] || ! echo "$changes_json" | jq empty 2>/dev/null; then
+        log_warning "APPLY" "Initial JSON extraction failed, trying repair..."
+
+        # Try to repair the extracted content
+        if [[ -n "$changes_json" ]]; then
+            changes_json=$(json_repair "$changes_json" 2>/dev/null)
+        fi
+
+        # If still invalid, log verbose error info
+        if [[ -z "$changes_json" ]] || ! echo "$changes_json" | jq empty 2>/dev/null; then
+            log_error "APPLY" "Failed to parse Engineer's JSON output"
+            log_error "APPLY" "Response length: ${#engineer_response} bytes"
+
+            # Check what we got
+            if ! echo "$engineer_response" | grep -q '[{[]'; then
+                log_error "APPLY" "No JSON structure found in response (no { or [ characters)"
+            elif ! echo "$engineer_response" | grep -q '[}\]]'; then
+                log_error "APPLY" "JSON appears truncated (no closing } or ])"
+            else
+                local jq_error
+                jq_error=$(echo "$changes_json" | jq empty 2>&1 | head -1)
+                log_error "APPLY" "JSON syntax error: $jq_error"
+            fi
+
+            log_error "APPLY" "Response preview: ${engineer_response:0:800}"
+            return 1
+        fi
+        log "APPLY" "JSON repaired successfully"
     fi
     
     # Normalize JSON format for various LLM outputs
@@ -881,12 +941,26 @@ Output JSON:
 
 # NOTE(jimmylee)
 # Validates that Engineer's JSON output is well-formed and has required fields
+# Tries to repair common JSON issues before failing
 validate_engineer_output() {
     local json_content="$1"
 
+    # Try direct validation first
     if ! echo "$json_content" | jq empty 2>/dev/null; then
-        log_error "VALIDATE" "Invalid JSON from Engineer"
-        return 1
+        # Try to repair common issues (trailing commas, etc.)
+        local repaired
+        repaired=$(json_repair "$json_content" 2>/dev/null)
+        if echo "$repaired" | jq empty 2>/dev/null; then
+            log "VALIDATE" "JSON repaired (fixed trailing commas or similar)"
+            json_content="$repaired"
+        else
+            log_error "VALIDATE" "Invalid JSON from Engineer"
+            # Show what went wrong
+            local jq_error
+            jq_error=$(echo "$json_content" | jq empty 2>&1 | head -1)
+            log_error "VALIDATE" "jq error: $jq_error"
+            return 1
+        fi
     fi
 
     local has_edits has_files
@@ -941,34 +1015,47 @@ validate_engineer_output() {
 fix_malformed_output() {
     local original_response="$1"
     local error_message="$2"
-    
-    local prompt="## Your Previous Output Had Errors
+
+    # Try to extract any usable JSON first
+    local extracted
+    extracted=$(extract_json "$original_response" 2>/dev/null)
+    if [[ -n "$extracted" ]] && echo "$extracted" | jq empty 2>/dev/null; then
+        # JSON is actually valid - check if it has required fields
+        if echo "$extracted" | jq -e '.edits or .files' >/dev/null 2>&1; then
+            echo "$extracted"
+            return 0
+        fi
+    fi
+
+    # Need to ask model to fix it
+    local prompt="# ⛔ YOUR OUTPUT WAS INVALID - FIX IT NOW
 
 Error: ${error_message}
 
-Your previous response:
-\`\`\`
-${original_response:0:2000}
-\`\`\`
+## What You Sent (truncated):
+${original_response:0:1500}
 
-## Fix Required
+## REQUIRED FORMAT
 
-Your output must be valid JSON with this structure:
+You MUST output ONLY this JSON structure:
 
 \`\`\`json
 {
-  \"files\": [
-    {
-      \"path\": \"relative/path/to/file.js\",
-      \"action\": \"create\",
-      \"content\": \"file content with \\n for newlines\"
-    }
+  \"edits\": [
+    {\"path\": \"file.ts\", \"type\": \"replace\", \"search\": \"old\", \"replace\": \"new\"}
   ],
+  \"commit_message\": \"fix: description\",
   \"summary\": \"What was changed\"
 }
 \`\`\`
 
-Please output the corrected JSON now. Only output the JSON block, nothing else."
+## RULES
+1. Start response with \`\`\`json
+2. End response with \`\`\`
+3. NO text before or after
+4. Valid JSON only
+
+Output the corrected JSON NOW:"
 
     invoke_persona "engineer" "$prompt"
 }

@@ -1,76 +1,42 @@
 # AGENTS.md
 
+Current version is 0.1
+
 This document provides critical context for AI agents working on this codebase. Read this file completely before making changes.
+
+## The Canonical Loop
+
+**See [LOOP.md](./LOOP.md) for the authoritative workflow definition.**
+
+LOOP.md is the source of truth for:
+- The complete workflow phases (Brainstorm → Plan → Implement → Review → Debug → Handoff)
+- TDD requirements and the Iron Laws
+- Verification requirements
+- Systematic debugging process
+- Review cycles and handoff procedures
+
+This file (AGENTS.md) contains project-specific details that complement LOOP.md.
+
+---
 
 ## What This Project Does
 
 This agent takes a directive (a goal written in `.directive`) and executes a multi-phase process that results in a Pull Request on a `GITHUB_REPO_AGENTS_WILL_WORK_ON`. The PR goes through 1-5 review cycles where multiple AI personas evaluate and improve the code. Between each review, there are potential code commits that increase the chance of approval. The process ends with a handoff to a human codebase owner who makes the final merge decision.
 
-## The Core Loop
+---
+
+## The Iron Laws (Summary)
+
+These are explained in detail in LOOP.md. Memorize them:
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              PHASE 1: PLANNING                               │
-│  1. Clone target repository to .workrepo/                                   │
-│  2. Deep codebase analysis (reads ALL source files)                         │
-│  3. Director creates execution plan                                          │
-│  4. Web research via Google Custom Search (if configured, and asked for)     │
-│  5. Gather input from all personas                                          │
-│  6. Director synthesizes requirements                                        │
-│  7. Post decision table to PR (what's incorporated vs skipped)              │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                      │
-                                      ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           PHASE 2: IMPLEMENTATION                            │
-│  1. Create feature branch                                                    │
-│  2. Engineer implements changes up to three attempts                         │
-│  3. Apply code changes with automatic retry for failed edits                │
-│  4. Pre-commit analysis and message generation                              │
-│  5. Commit and push changes                                                  │
-│  6. Create Pull Request                                                      │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                      │
-                                      ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                         PHASE 3: REVIEW CYCLES                               │
-│                                                                              │
-│  For each cycle (max 5 iterations):                                         │
-│    ┌──────────────────────────────────────────────────────────────────┐    │
-│    │ Project Manager Review (up to 2 fix attempts)                     │    │
-│    │   → If NEEDS_WORK: Director synthesizes → Engineer fixes → Commit │    │
-│    └──────────────────────────────────────────────────────────────────┘    │
-│                                  │                                          │
-│                                  ▼                                          │
-│    ┌──────────────────────────────────────────────────────────────────┐    │
-│    │ Technical Writer Review (up to 2 fix attempts)                    │    │
-│    │   → If NEEDS_WORK: Director synthesizes → Engineer fixes → Commit │    │
-│    └──────────────────────────────────────────────────────────────────┘    │
-│                                  │                                          │
-│                                  ▼                                          │
-│    ┌──────────────────────────────────────────────────────────────────┐    │
-│    │ Researcher Review (if enabled, up to 2 fix attempts)              │    │
-│    │   → If NEEDS_WORK: Director synthesizes → Engineer fixes → Commit │    │
-│    └──────────────────────────────────────────────────────────────────┘    │
-│                                  │                                          │
-│                                  ▼                                          │
-│    ┌──────────────────────────────────────────────────────────────────┐    │
-│    │ If ALL approved → Director Final Review                           │    │
-│    │   → If APPROVE: Submit GitHub approval with "LGTM"                │    │
-│    │   → Break loop                                                     │    │
-│    └──────────────────────────────────────────────────────────────────┘    │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                      │
-                                      ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                            HUMAN HANDOFF                                     │
-│  PR is ready for human codebase owner to review and merge                   │
-│  Agent does NOT auto-merge - human makes final decision                      │
-└─────────────────────────────────────────────────────────────────────────────┘
+1. NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST
+2. NO FIXES WITHOUT ROOT CAUSE INVESTIGATION FIRST
+3. NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE
+4. EVIDENCE BEFORE CLAIMS, ALWAYS
 ```
 
-**Key insight**: Between each review, there are potential code commits. Each fix commit improves the code and increases the chance of the entire cycle being approved.
+---
 
 ## Two Output Streams
 
@@ -81,14 +47,11 @@ This is a critical distinction. The agent produces two completely separate outpu
 The terminal shows detailed operational logging:
 - Colored output with persona-specific styling (diamonds, background colors)
 - Token usage and API receipts
-- Logging library utility methods are used to improve appearance
 - Phase markers (PLANNING, REVIEW CYCLE 1, COMPLETE)
 - Error messages and debugging information
 - LLM vendor indicators (Anthropic, OpenAI, Local)
 
 **This is NOT seen by anyone except developers running the agent locally.**
-
-The terminal log exists for debugging and observing what's happening internally.
 
 ### GitHub PR + Comments (The Deliverable)
 
@@ -108,9 +71,9 @@ The GitHub output must be:
 - Easy to follow and understand
 - Follows the personality in `.personality`
 
-## The Internal Monologue
+---
 
-This section is critical. Read it carefully.
+## The Internal Monologue
 
 ### Philosophy
 
@@ -118,19 +81,13 @@ All GitHub comments should read as ONE cohesive internal reflection from a singl
 
 The goal is to create the experience of watching someone think through a code review out loud. Each comment builds on the previous ones. The reviewer references earlier observations. The conversation flows naturally.
 
-### Why This Matters
-
-When an observer reads the PR comments, they should feel like they're following one person's thought process as they carefully review the code. Not a committee. Not multiple reviewers. One dedicated developer who cares deeply about getting it right.
-
-This is what makes the agent's output feel human and trustworthy.
-
 ### How It Works Technically
 
 1. **Structured Review**: Each persona produces structured JSON output with their review findings
 
 2. **Humanization**: The `humanize_for_github()` function in `lib/providers.sh` transforms structured reviews into natural prose using GPT-5
 
-3. **Comment Accumulation**: Previous humanized comments are stored in a file (`$STATE_DIR/humanized_comments.txt`) that survives subshell boundaries. This will be deleted for each new session.
+3. **Comment Accumulation**: Previous humanized comments are stored in a file (`$STATE_DIR/humanized_comments.txt`) that survives subshell boundaries
 
 4. **Context Passing**: Each new comment receives ALL previous comments as context, with instructions to continue the conversation
 
@@ -139,39 +96,6 @@ This is what makes the agent's output feel human and trustworthy.
    - Reference or build on earlier observations
    - Feel like the next natural thought in the reflection
    - Maintain the same voice and tone throughout
-
-### What Good Comments Sound Like
-
-```
-I've been through this carefully, and I'm feeling good about the overall direction. 
-The footer component slots in cleanly without disrupting the existing layout system.
-
-Building on what I noted earlier about the styling approach - the way this uses 
-the existing color tokens is exactly right. No new variables, no special cases, 
-just consistent application of what's already there.
-
-One thing I want to call out: the error handling in the API integration is solid. 
-I checked the edge cases and they're covered. This is the kind of attention to 
-detail that makes code maintainable.
-```
-
-### What Bad Comments Sound Like
-
-```
-REVIEW FROM PROJECT MANAGER:
-- Requirements met: Yes
-- Scope adherence: Good
-- Issues: None
-
----
-
-REVIEW FROM TECHNICAL WRITER:
-- Naming: Acceptable
-- Documentation: Adequate
-- Clarity: Good
-```
-
-The bad example feels robotic, disconnected, and obviously machine-generated. Each section starts fresh with no connection to what came before.
 
 ### Key Files for Internal Monologue
 
@@ -189,6 +113,8 @@ The bad example feels robotic, disconnected, and obviously machine-generated. Ea
 3. **ALWAYS** maintain first-person voice ("I've checked...", "I noticed...")
 4. **ALWAYS** show reasoning process, not just conclusions
 5. The `.personality` file is sacred - it defines the agent's voice across all comments
+
+---
 
 ## The Decision Table
 
@@ -211,7 +137,9 @@ When the Director synthesizes suggestions from all personas, a markdown table is
 | ⏭️ | Skipped - intentionally not implementing (out of scope, side effect) |
 | ❓ | Unknown decision type |
 
-This table uses `--skip-humanize` flag to preserve markdown formatting (tables shouldn't be humanized into prose).
+This table uses `--skip-humanize` flag to preserve markdown formatting.
+
+---
 
 ## Personas
 
@@ -239,13 +167,20 @@ Each persona outputs structured JSON:
 
 This structured output is then humanized before posting to GitHub.
 
+---
+
 ## Key Files
 
 | File | Purpose |
 |------|---------|
+| `LOOP.md` | **Canonical workflow definition** - the source of truth for phases and iron laws |
+| `skills/` | **Mandatory workflow skills** - TDD, debugging, verification, review patterns |
 | `agent.sh` | Entry point - handles commands like `run`, `dry-run`, `status` |
 | `lib/persona.sh` | Main orchestration - contains `execute_plan()` and all workflow logic |
-| `lib/providers.sh` | LLM API calls - Anthropic, OpenAI, Ollama, plus `humanize_for_github()` |
+| `lib/planning.sh` | Planning phase - clone, analyze, research, requirements synthesis |
+| `lib/implementation.sh` | Implementation - Engineer code generation and application |
+| `lib/review.sh` | Review cycles - persona reviews, feedback synthesis, fix iterations |
+| `lib/providers.sh` | LLM API calls - Anthropic, OpenAI, plus `humanize_for_github()` |
 | `lib/logging.sh` | Terminal output styling - colors, icons, phase markers |
 | `lib/memory.sh` | Task context and state management |
 | `lib/config.sh` | Configuration loading, persona/model mapping |
@@ -256,37 +191,81 @@ This structured output is then humanized before posting to GitHub.
 | `.personality` | Voice and tone definition for all humanized output |
 | `.directive` | User's goal - the input that drives everything |
 
+---
+
+## Skills (Mandatory Workflows)
+
+**See [skills/](./skills/) directory for mandatory workflows.**
+
+Skills are not suggestions - if a skill applies to your task, you MUST use it.
+
+| Skill | When to Use |
+|-------|-------------|
+| [test-driven-development](./skills/test-driven-development.md) | Before writing ANY implementation code |
+| [systematic-debugging](./skills/systematic-debugging.md) | When encountering ANY bug or test failure |
+| [verification-before-completion](./skills/verification-before-completion.md) | Before claiming ANY work is complete |
+| [two-stage-review](./skills/two-stage-review.md) | When reviewing ANY implementation |
+| [brainstorming](./skills/brainstorming.md) | Before ANY creative work (features, components) |
+
+---
+
 ## Directory Structure
 
 ```
 www-agent/
-├── agent.sh                    # Entry point
-├── .directive                  # User's goal (you edit this)
-├── .personality                # Agent's voice definition
-├── .workrepo/                  # Cloned target repos (gitignored)
-├── .context/                   # Session context (gitignored)
-├── .state/                     # Session state including humanized_comments.txt (gitignored)
-├── lib/                        # Core libraries
-├── adapters/                   # GitHub/git operation scripts
-├── personas/                   # Persona definitions (markdown + JSON)
-├── workflows/                  # Workflow checklists
-└── configs/                    # Model configuration
+├── LOOP.md                        # Canonical workflow definition (READ THIS)
+├── AGENTS.md                      # Project-specific context (this file)
+├── agent.sh                       # Entry point
+├── .directive                     # User's goal (you edit this)
+├── .personality                   # Agent's voice definition
+├── .workrepo/                     # Cloned target repos (gitignored)
+├── .context/                      # Session context (gitignored)
+├── .state/                        # Session state including humanized_comments.txt (gitignored)
+├── lib/                           # Core libraries
+├── adapters/                      # GitHub/git operation scripts
+├── personas/                      # Persona definitions (markdown + JSON)
+├── skills/                        # Mandatory workflow skills (READ THESE)
+├── workflows/                     # Workflow checklists
+└── configs/                       # Model configuration
 ```
+
+---
 
 ## Rules When Modifying This Codebase
 
-1. **NEVER break the internal monologue** - Comments must maintain continuity across all persona reviews. The file-based persistence (`HUMANIZED_COMMENTS_FILE`) is critical.
+1. **Follow LOOP.md** - The workflow, TDD requirements, verification requirements, and debugging process are all defined there. Don't deviate.
 
-2. **The `.personality` file defines the agent's voice** - Changes here affect ALL humanized output. Do not modify without careful consideration.
+2. **NEVER break the internal monologue** - Comments must maintain continuity across all persona reviews. The file-based persistence (`HUMANIZED_COMMENTS_FILE`) is critical.
 
-3. **Terminal logging is for developers; GitHub output is the product** - Keep these concerns separate. Don't mix debugging output with user-facing content.
+3. **The `.personality` file defines the agent's voice** - Changes here affect ALL humanized output. Do not modify without careful consideration.
 
-4. **The decision table emoji meanings are important** - Observers rely on ✅/⏭️ to understand what was incorporated vs skipped.
+4. **Terminal logging is for developers; GitHub output is the product** - Keep these concerns separate. Don't mix debugging output with user-facing content.
 
-5. **Preserve the review cycle structure** - The loop of review → feedback → fix → commit → re-review is core to how the agent improves code quality.
+5. **The decision table emoji meanings are important** - Observers rely on ✅/⏭️ to understand what was incorporated vs skipped.
 
-6. **The agent does NOT auto-merge** - Human handoff is intentional. The human codebase owner always makes the final merge decision.
+6. **Preserve the review cycle structure** - The loop of review → feedback → fix → commit → re-review is core to how the agent improves code quality.
 
-7. **Comment humanization uses GPT** - This is intentional for quality. The `humanize_for_github()` function is performance-sensitive.
+7. **The agent does NOT auto-merge** - Human handoff is intentional. The human codebase owner always makes the final merge decision.
 
-8. **Subshell boundaries matter** - The file-based comment persistence exists because bash subshells (`$(...)`) don't share variable state with parent shells.
+8. **Comment humanization uses GPT** - This is intentional for quality. The `humanize_for_github()` function is performance-sensitive.
+
+9. **Subshell boundaries matter** - The file-based comment persistence exists because bash subshells (`$(...)`) don't share variable state with parent shells.
+
+---
+
+## Patterns Discovered (Update This Section)
+
+As you work on this codebase, add reusable patterns here:
+
+- When modifying persona logic, also update the corresponding persona definition in `personas/`
+- Tests require the target repo to be cloned in `.workrepo/`
+- Environment variables are loaded from `.env` via `lib/config.sh`
+- All LLM calls go through `lib/providers.sh` - don't call APIs directly
+
+---
+
+## Credits
+
+This workflow incorporates patterns from:
+- [obra/superpowers](https://github.com/obra/superpowers) - TDD, systematic debugging, verification-before-completion, subagent-driven development
+- [snarktank/ralph](https://github.com/snarktank/ralph) - Fresh context per iteration, progress tracking, small task granularity
