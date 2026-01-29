@@ -592,12 +592,29 @@ ${personas_list}
 
 With FULL visibility into the codebase, analyze this directive and create an execution plan.
 
+### Planning Phase (from LOOP.md)
+Planning must produce BITE-SIZED tasks (each step is ONE action):
+- 'Write the failing test' - step
+- 'Run it to make sure it fails' - step
+- 'Implement minimal code to pass' - step
+- 'Run tests and verify they pass' - step
+- 'Commit' - step
+
+NOT acceptable: 'Implement the feature' (too big)
+
+### Analysis Questions
 1. Based on deep understanding of the code, what specifically needs to be done?
 2. Which files will likely need to be modified or created?
 3. Are there any external dependencies, packages, or APIs that need current information verified via web research?
 4. Which perspectives should be consulted before implementation starts?
 5. What are the key acceptance criteria based on the existing code patterns?
 6. What risks are foreseeable given the current codebase structure?
+
+### Iron Laws (these are non-negotiable)
+- NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST (if test infrastructure exists)
+- NO FIXES WITHOUT ROOT CAUSE INVESTIGATION FIRST
+- NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE
+- EVIDENCE BEFORE CLAIMS, ALWAYS
 
 Output a JSON plan:
 

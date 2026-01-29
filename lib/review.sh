@@ -21,19 +21,57 @@ get_persona_review() {
     local acceptance_criteria="$4"
     local cycle_number="${5:-1}"
 
+    # NOTE(www-agent): Review follows two-stage pattern from LOOP.md:
+    # Stage 1: Spec compliance (does it match requirements exactly?)
+    # Stage 2: Code quality (is it well-built?)
     local review_focus=""
     case "$persona_name" in
         project-manager)
-            review_focus="Focus on: Does this meet the acceptance criteria exactly? Is scope appropriate? Any missing requirements?"
+            review_focus="## STAGE 1: SPEC COMPLIANCE REVIEW
+Focus on: Does the code match the spec exactly?
+
+Check for:
+- **Missing requirements**: Did they implement everything requested? Anything skipped?
+- **Extra work**: Did they build things NOT requested? Over-engineering?
+- **Misunderstandings**: Did they interpret requirements differently than intended?
+
+Your job is to verify they built what was requested - nothing more, nothing less.
+If something is missing or extra, it MUST be flagged."
             ;;
         technical-writer)
-            review_focus="Focus on: Are naming conventions consistent with existing codebase? Is terminology aligned? Are error messages clear?"
+            review_focus="## STAGE 2: CODE QUALITY REVIEW (Naming & Clarity)
+Focus on: Is the implementation well-built from a clarity perspective?
+
+Check for:
+- **Naming**: Are names clear and consistent with existing codebase patterns?
+- **Terminology**: Is terminology aligned with the rest of the project?
+- **Error messages**: Are they clear and helpful?
+- **Comments**: Are comments useful (if any) or just noise?
+
+Only flag issues that impact code maintainability and clarity."
             ;;
         researcher)
-            review_focus="Focus on: Are best practices followed? Any security concerns? Performance issues? Is the approach sound?"
+            review_focus="## STAGE 2: CODE QUALITY REVIEW (Best Practices)
+Focus on: Is the implementation well-built from a best practices perspective?
+
+Check for:
+- **Security**: Any vulnerabilities or unsafe patterns?
+- **Performance**: Any obvious inefficiencies?
+- **Patterns**: Does it follow established patterns in the codebase?
+- **Edge cases**: Are error conditions handled?
+
+Only flag real issues, not preferences."
             ;;
         director)
-            review_focus="Focus on: Overall quality, integration, and final approval. Synthesize any issues from other reviews."
+            review_focus="## FINAL REVIEW
+Focus on: Overall quality and final approval decision.
+
+Synthesize findings from previous reviews:
+- Were spec compliance issues addressed?
+- Were code quality issues addressed?
+- Is this ready for human review?
+
+Only approve if ALL previous issues were resolved."
             ;;
         *)
             review_focus="Provide your expert review based on your role."
@@ -145,7 +183,21 @@ fix_review_issues() {
         existing_files_context=$(read_existing_files "$mentioned_files")
     fi
 
-    local prompt="## Fix Cycle ${cycle_number} - Address Review Feedback
+    local prompt="# ⛔ CRITICAL: OUTPUT FORMAT
+
+You MUST output ONLY a JSON code block. NO text before. NO text after.
+
+\`\`\`json
+{
+  \"edits\": [...],
+  \"commit_message\": \"...\",
+  \"summary\": \"...\"
+}
+\`\`\`
+
+---
+
+## Fix Cycle ${cycle_number} - Address Review Feedback
 
 ⚠️ IMPORTANT: If previous edits failed, they were ROLLED BACK.
 - The file contents below show the ACTUAL current state
@@ -171,15 +223,16 @@ Follow the fix instructions above EXACTLY. Each item tells you:
 - What's wrong
 - How to fix it
 
-## Rules
+## Rules (from LOOP.md Iron Laws)
 
-1. **ONLY USE VISIBLE CONTENT**: Your search/anchor strings MUST appear in the file contents above
-2. **NEVER REFERENCE PREVIOUS ATTEMPTS**: If your earlier edits failed, they don't exist - start fresh
-3. **READ FILES FIRST**: Use the file contents with line numbers above - NEVER guess or assume
-4. **FOLLOW INSTRUCTIONS PRECISELY**: Do exactly what's requested, nothing more
-5. **SURGICAL EDITS**: Use targeted edit operations with multi-line search strings
-6. **NO EXTRA CHANGES**: Don't fix other things you notice
-7. **UNIQUE SEARCH STRINGS**: Include 3-5 lines of context to ensure uniqueness
+1. **EVIDENCE BEFORE CLAIMS**: Never say 'fixed' without verification
+2. **ONLY USE VISIBLE CONTENT**: Your search/anchor strings MUST appear in the file contents above
+3. **NEVER REFERENCE PREVIOUS ATTEMPTS**: If your earlier edits failed, they don't exist - start fresh
+4. **READ FILES FIRST**: Use the file contents with line numbers above - NEVER guess or assume
+5. **FOLLOW INSTRUCTIONS PRECISELY**: Do exactly what's requested, nothing more
+6. **SURGICAL EDITS**: Use targeted edit operations with multi-line search strings
+7. **NO EXTRA CHANGES**: Don't fix other things you notice - NO FIXES WITHOUT ROOT CAUSE
+8. **UNIQUE SEARCH STRINGS**: Include 3-5 lines of context to ensure uniqueness
 
 ## CRITICAL: Search String Rules
 
@@ -230,7 +283,19 @@ Your search strings MUST:
 
 CRITICAL: Match the field names to the edit type! Do NOT use \"replace\" with \"insert_after\" - use \"content\" instead.
 
-Output ONLY the JSON block - no explanations before or after."
+# ⛔ FINAL REMINDER: OUTPUT ONLY JSON
+
+Your response must be EXACTLY:
+
+\`\`\`json
+{
+  \"edits\": [...],
+  \"commit_message\": \"fix(scope): address review feedback\",
+  \"summary\": \"What was fixed\"
+}
+\`\`\`
+
+NO other text. Start with \`\`\`json, end with \`\`\`. Nothing else."
 
     invoke_persona "engineer" "$prompt"
 }
