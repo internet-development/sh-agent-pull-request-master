@@ -1,6 +1,6 @@
 [package]
 name = "apply-edits"
-version = "0.1.0"
+version = "0.5.0"
 edition = "2021"
 description = "Apply targeted code edits with multi-line support for www-agent"
 authors = ["www-agent"]

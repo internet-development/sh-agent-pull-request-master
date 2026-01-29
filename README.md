@@ -1,6 +1,6 @@
 # SH-AGENT-PULL-REQUEST-MASTER
 
-Multi-persona agent for submitting a Pull Request to your favorite GitHub repository you have access to.
+**v0.5.0** — Multi-persona agent for submitting a Pull Request to your favorite GitHub repository you have access to.
 
 All you need is Bash 3.2, Rust and some API keys.
 
@@ -45,7 +45,7 @@ To change what the agent works on, edit the `.directive` file directly. The agen
 | Command | Description |
 |---------|-------------|
 | `./agent.sh run` | Run agent using `.directive` file |
-| `./agent.sh dry-run` | Test full flow without executing changes |
+| `./agent.sh dry-run` | Test full flow without executing changes (safe preview) |
 | `./agent.sh new` | Clear current session |
 | `./agent.sh status` | Show environment and session status |
 | `./agent.sh test-models` | Test API connections only |
@@ -87,6 +87,18 @@ Your `GITHUB_TOKEN` needs these permissions on the target repository:
 - `write:discussion` - Write access to discussions (for PR comments)
 
 If working on a public repo you don't own, you'll need to fork it first and set `GITHUB_REPO_AGENTS_WILL_WORK_ON` to your fork.
+
+## Reliability Guarantees
+
+- **Atomic edits by default** — if any edit fails, all changes are rolled back automatically
+- **Dry-run parity** — preview mode validates the same conditions as real execution
+- **Helpful error recovery** — failed edits include closest-match suggestions and hints
+- **Large file support** — memory-efficient handling for files over 100KB
+
+## Path Resolution
+
+All file paths in edit operations are resolved relative to the working directory (`workdir`). Paths containing `../` may modify files outside the repository if explicitly provided. The agent trusts the caller to provide valid paths.
+
 
 ## Questions
 
