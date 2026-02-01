@@ -176,7 +176,7 @@ All tests pass when running `cargo test` in `tools/apply-edits/`.
 
 ### Security Audit
 
-`cargo audit` reports no high/critical vulnerabilities.
+`cargo audit` reports no high/critical vulnerabilities (as of 2024-01, cargo-audit 0.18).
 
 ### CLI/JSON Stability
 
