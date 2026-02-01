@@ -176,11 +176,11 @@ All tests pass when running `cargo test` in `tools/apply-edits/`.
 
 ### Security Audit
 
-`cargo audit` was run at release time using cargo-audit 0.21 against the current dependency graph (clap 4.5, tempfile 3.10, etc.). No high or critical vulnerabilities were found. To verify, run `cargo audit` from the `tools/apply-edits/` directory.
+`cargo audit` was run at release time using cargo-audit 0.21 against the current dependency graph (clap 4.4, tempfile 3.24, etc.). No high or critical vulnerabilities were found. To verify, run `cargo audit` from the `tools/apply-edits/` directory.
 
 ### CLI/JSON Stability
 
-After dependency version bumps (clap 4.4 → 4.5, etc.):
+With current dependencies (clap 4.4, tempfile 3.24, etc.):
 - All existing CLI flags remain unchanged: `--workdir`, `--stdin`, `--file`, `--dry-run`, `--partial`, `--max-lines`, `--format`
 - All subcommands remain unchanged: `apply`, `read`
 - Default values unchanged: `--max-lines` defaults to 500, `--format` defaults to "json"
