@@ -176,7 +176,7 @@ All tests pass when running `cargo test` in `tools/apply-edits/`.
 
 ### Security Audit
 
-`cargo audit` was run on 2025-01 using cargo-audit 0.21 against the current dependency graph (clap 4.5, tempfile 3.10, etc.). No high or critical vulnerabilities were found. To verify, run `cargo audit` from the `tools/apply-edits/` directory.
+`cargo audit` was run at release time using cargo-audit 0.21 against the current dependency graph (clap 4.5, tempfile 3.10, etc.). No high or critical vulnerabilities were found. To verify, run `cargo audit` from the `tools/apply-edits/` directory.
 
 ### CLI/JSON Stability
 
