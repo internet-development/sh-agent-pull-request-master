@@ -45,7 +45,7 @@ To change what the agent works on, edit the `.directive` file directly. The agen
 | Command | Description |
 |---------|-------------|
 | `./agent.sh run` | Run agent using `.directive` file |
-| `./agent.sh dry-run` | Test full flow without executing changes |
+| `./agent.sh dry-run` | Test full flow without executing changes (no files modified) |
 | `./agent.sh new` | Clear current session |
 | `./agent.sh status` | Show environment and session status |
 | `./agent.sh test-models` | Test API connections only |
@@ -77,7 +77,7 @@ GITHUB_REPO_AGENTS_WILL_WORK_ON=internet-development/nextjs-sass-starter
 - `rust` for the Engineer
 - `curl` for API requests (standard on macOS/Linux)
 - `git` for version control operations
-- `jq` for JSON parsing (required)
+- `jq` (≥1.6) for JSON parsing (required)
 
 ## GitHub Token Permissions
 
@@ -87,6 +87,15 @@ Your `GITHUB_TOKEN` needs these permissions on the target repository:
 - `write:discussion` - Write access to discussions (for PR comments)
 
 If working on a public repo you don't own, you'll need to fork it first and set `GITHUB_REPO_AGENTS_WILL_WORK_ON` to your fork.
+
+## Key Capabilities
+
+- **Dry-run mode**: Simulate all operations without modifying files. Uses the same validation logic as real execution.
+- **Atomic mode (default)**: All edits succeed or all are rolled back. Any failure restores the repository to its original state.
+- **Partial mode**: Continue applying edits even if some fail. Successful edits are kept.
+- **Indentation-aware matching**: Automatically handles indentation differences between search strings and file content.
+- **Rich error diagnostics**: When edits fail, see closest matches with line numbers and similarity scores.
+
 
 ## Questions
 
