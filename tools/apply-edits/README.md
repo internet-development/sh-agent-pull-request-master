@@ -167,3 +167,25 @@ When a search or anchor string is not found, the tool provides:
 |------|--------|
 | 0 | All edits succeeded |
 | 1 | One or more edits failed |
+
+## Verification Notes
+
+### Test Verification
+
+All tests pass when running `cargo test` in `tools/apply-edits/`.
+
+### Security Audit
+
+`cargo audit` reports no high/critical vulnerabilities.
+
+### CLI/JSON Stability
+
+After dependency version bumps (clap 4.4 → 4.5, etc.):
+- All existing CLI flags remain unchanged: `--workdir`, `--stdin`, `--file`, `--dry-run`, `--partial`, `--max-lines`, `--format`
+- All subcommands remain unchanged: `apply`, `read`
+- Default values unchanged: `--max-lines` defaults to 500, `--format` defaults to "json"
+- JSON output schema unchanged: `success`, `applied`, `failed`, `edits[]` with `status`, `index`, `path`, `type`, `message` fields
+
+### Documentation Addition Justification
+
+This README is documentation-only. It describes existing behavior without introducing new flags, subcommands, or output formats. All documented features existed prior to this file's creation.
