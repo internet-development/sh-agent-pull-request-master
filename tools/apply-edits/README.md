@@ -1,6 +1,6 @@
 # apply-edits
 
-A Rust CLI tool for applying targeted code edits with multi-line support, indentation-aware matching, and atomic execution guarantees (atomic mode).
+A Rust CLI tool for applying targeted code edits with multi-line support, indentation-aware matching, and Atomic mode execution guarantees.
 
 ## Installation
 

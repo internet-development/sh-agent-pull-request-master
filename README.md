@@ -45,7 +45,7 @@ To change what the agent works on, edit the `.directive` file directly. The agen
 | Command | Description |
 |---------|-------------|
 | `./agent.sh run` | Run agent using `.directive` file |
-| `./agent.sh dry-run` | Test full flow without executing changes (no files modified) |
+| `./agent.sh dry-run` | Test full flow without executing changes |
 | `./agent.sh new` | Clear current session |
 | `./agent.sh status` | Show environment and session status |
 | `./agent.sh test-models` | Test API connections only |
@@ -90,7 +90,7 @@ If working on a public repo you don't own, you'll need to fork it first and set 
 
 ## Key Capabilities
 
-- **Dry-run mode**: Simulate all operations without modifying files. Uses the same validation logic as real execution.
+- **dry-run mode**: Simulate all operations without modifying files. Uses the same validation logic as real execution.
 - **Atomic mode (default)**: All edits succeed or all are rolled back. Any failure restores the repository to its original state.
 - **Partial mode (non-atomic)**: Continue applying edits even if some fail. Successful edits are kept.
 - **Indentation-aware matching**: Automatically handles indentation differences between search strings and file content.
