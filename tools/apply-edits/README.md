@@ -1,6 +1,6 @@
 # apply-edits
 
-A Rust CLI tool for applying targeted code edits with multi-line support, indentation-aware matching, and atomic execution guarantees.
+A Rust CLI tool for applying targeted code edits with multi-line support, indentation-aware matching, and atomic execution guarantees (atomic mode).
 
 ## Installation
 
@@ -30,7 +30,7 @@ apply-edits apply --workdir /path/to/repo --file edits.json
 | `--stdin` | Read JSON from stdin |
 | `--file` | Path to JSON file containing edits |
 | `--dry-run` | Show what would happen without making changes |
-| `--partial` | Continue on errors (non-atomic mode) |
+| `--partial` | Continue on errors (non-atomic mode, also called partial mode) |
 
 **Default Behavior (Atomic Mode):**
 

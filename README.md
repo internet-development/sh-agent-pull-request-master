@@ -92,7 +92,7 @@ If working on a public repo you don't own, you'll need to fork it first and set 
 
 - **Dry-run mode**: Simulate all operations without modifying files. Uses the same validation logic as real execution.
 - **Atomic mode (default)**: All edits succeed or all are rolled back. Any failure restores the repository to its original state.
-- **Partial mode**: Continue applying edits even if some fail. Successful edits are kept.
+- **Partial mode (non-atomic)**: Continue applying edits even if some fail. Successful edits are kept.
 - **Indentation-aware matching**: Automatically handles indentation differences between search strings and file content.
 - **Rich error diagnostics**: When edits fail, see closest matches with line numbers and similarity scores.
 
