@@ -99,7 +99,7 @@ The `apply-edits` tool provides strong safety guarantees by default:
 
 ### Behavior Clarifications (v1.x)
 
-The following behaviors are guaranteed and enforced by integration tests (see `tools/apply-edits/src/` test modules):
+The following behaviors are guaranteed for all v1.x releases and are backward compatible with previous v1 releases. These guarantees are enforced by integration tests (see `tools/apply-edits/src/` test modules):
 
 1. **Dry-run validation**: `--dry-run` performs full validation of all edits against actual file contents. It reports exactly what would happen without modifying any files.
 2. **Atomic rollback**: In default (atomic) mode, if edit N fails, all previously successful edits (1 through N-1) are rolled back to their original state.
