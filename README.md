@@ -37,7 +37,7 @@ Think of this project as a **scripted PR author**:
 1. You write a single directive describing your goal
 2. The agent decomposes that goal across personas (research, planning, engineering, review)
 3. Changes are applied safely using a transactional edit engine
-4. A GitHub Pull Request is created, reviewed, and optionally approved
+4. A GitHub Pull Request is created and annotated with review feedback
 
 ## How It Works
 
@@ -95,7 +95,7 @@ Create a `.env` file with your configuration.
 ```bash
 # At least ONE API key is required (choose your provider)
 API_KEY_ANTHROPIC=...      # For Claude models
-API_KEY_OPEN_AI=...        # For GPT models
+OPENAI_API_KEY=...         # For GPT models
 
 # GitHub configuration (all required)
 GITHUB_TOKEN=...           # Token with repo permissions
@@ -158,7 +158,7 @@ The following behaviors are tested in `tools/apply-edits/tests/integration_tests
 1. **Dry-run validation**: `--dry-run` performs full validation of all edits against actual file contents. It reports exactly what would happen without modifying any files.
 2. **Atomic rollback**: In default (atomic) mode, if edit N fails, all previously successful edits (1 through N-1) are rolled back to their original state.
 3. **Partial continuation**: With `--partial`, failed edits are skipped but successful edits are preserved. The exit code is non-zero if any edit fails.
-4. **JSON output**: The JSON output schema includes `success` (boolean), `applied` (number), `failed` (number), and `edits` (array). Each edit entry includes `status`, `index`, `path`, and `type`. Error entries additionally include `error`, `message`, and contextual fields like `hint` and `closest_matches`.
+4. **JSON output stability**: The JSON output schema is guaranteed to remain stable across all v1.x releases. It includes `success` (boolean), `applied` (number), `failed` (number), and `edits` (array). Each edit entry includes `status`, `index`, `path`, and `type`. Error entries additionally include `error`, `message`, and contextual fields like `hint` and `closest_matches`.
 
 ## Mental Model
 
