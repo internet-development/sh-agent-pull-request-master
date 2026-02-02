@@ -4,6 +4,42 @@ Multi-persona agent for submitting a Pull Request to your favorite GitHub reposi
 
 All you need is Bash 3.2, Rust and some API keys.
 
+## What This Project Is
+
+SH-AGENT-PULL-REQUEST-MASTER is a Bash-driven, multi-persona automation agent that:
+- Reads a single directive written in natural language
+- Coordinates multiple specialized "personas" (research, planning, engineering, review)
+- Produces a real GitHub Pull Request against a target repository
+
+It is designed for **automated, auditable code changes**, not interactive coding or chat-based assistance.
+
+## What This Project Is Not
+
+- ❌ A general-purpose AI coding assistant
+- ❌ A GitHub Action (it runs locally)
+- ❌ A replacement for human code review
+- ❌ A tool that resolves merge conflicts
+- ❌ A tool that infers intent beyond the explicit directive
+- ❌ A tool that bypasses GitHub permissions
+
+## Safety First
+
+This project is designed to be safe by default:
+- ✅ All file edits are atomic (all succeed or all roll back)
+- ✅ Dry-run mode validates changes without touching disk
+- ✅ No partial corruption of repositories
+- ✅ Machine-readable JSON output for auditability
+- ✅ Large files (>100KB) handled safely with memory-mapped I/O
+
+## High-Level Mental Model
+
+Think of this project as a **scripted PR author**:
+
+1. You write a single directive describing your goal
+2. The agent decomposes that goal across personas (research, planning, engineering, review)
+3. Changes are applied safely using a transactional edit engine
+4. A GitHub Pull Request is created, reviewed, and optionally approved
+
 ## How It Works
 
 Check out [AGENTS.md](https://github.com/internet-development/sh-agent-pull-request-master) for a full breakdown.
@@ -53,17 +89,30 @@ To change what the agent works on, edit the `.directive` file directly. The agen
 
 ## Environment Variables
 
-Create a `.env` file with:
+Create a `.env` file with your configuration.
+
+### Required Environment Variables
 
 ```bash
-API_KEY_ANTHROPIC=...
-GITHUB_TOKEN=...
-GITHUB_REPO_AGENTS_WILL_WORK_ON=owner/repo
-GITHUB_USERNAME=...
-API_KEY_OPEN_AI=...
+# At least ONE API key is required (choose your provider)
+API_KEY_ANTHROPIC=...      # For Claude models
+API_KEY_OPEN_AI=...        # For GPT models
+
+# GitHub configuration (all required)
+GITHUB_TOKEN=...           # Token with repo permissions
+GITHUB_REPO_AGENTS_WILL_WORK_ON=owner/repo  # Target repository
+GITHUB_USERNAME=...        # Your GitHub username
+```
+
+### Optional Environment Variables
+
+```bash
+# For web search capabilities (optional)
 API_KEY_GOOGLE_CUSTOM_SEARCH=...
 GOOGLE_CUSTOM_SEARCH_ID=...
 ```
+
+> **Note:** You do **not** need all API keys configured to start—only one provider is required.
 
 **Important:** `GITHUB_REPO_AGENTS_WILL_WORK_ON` specifies the repository where the agent will create PRs, NOT this agent's repository. For example, if you want the agent to work on `internet-development/nextjs-sass-starter`, set:
 
@@ -83,10 +132,18 @@ GITHUB_REPO_AGENTS_WILL_WORK_ON=internet-development/nextjs-sass-starter
 
 Your `GITHUB_TOKEN` needs these permissions on the target repository:
 
+**Classic Tokens:**
 - `repo` - Full control of private repositories
 - `write:discussion` - Write access to discussions (for PR comments)
 
+**Fine-Grained Tokens (recommended for 2025+):**
+- `contents: write` - To push commits
+- `pull_requests: write` - To create and update PRs
+- `metadata: read` - Basic repository access
+
 If working on a public repo you don't own, you'll need to fork it first and set `GITHUB_REPO_AGENTS_WILL_WORK_ON` to your fork.
+
+**Token Validation:** The agent validates token scopes on startup. If scopes are insufficient, you'll receive a clear error message explaining which permissions are missing.
 
 ## Safety Guarantees
 
@@ -99,12 +156,23 @@ The `apply-edits` tool provides strong safety guarantees by default:
 
 ### Behavior Clarifications (v1.x)
 
-The following behaviors are guaranteed for all v1.x releases and are backward compatible with previous v1 releases. These guarantees are enforced by integration tests (see `tools/apply-edits/src/` test modules):
+The following behaviors are guaranteed for all v1.x releases and are backward compatible with previous v1 releases. These guarantees are enforced by integration tests (see `tools/apply-edits/tests/integration_tests.rs`):
 
 1. **Dry-run validation**: `--dry-run` performs full validation of all edits against actual file contents. It reports exactly what would happen without modifying any files.
 2. **Atomic rollback**: In default (atomic) mode, if edit N fails, all previously successful edits (1 through N-1) are rolled back to their original state.
 3. **Partial continuation**: With `--partial`, failed edits are skipped but successful edits are preserved. The exit code is non-zero if any edit fails.
 4. **JSON output stability**: The JSON output schema includes `success` (boolean), `applied` (number), `failed` (number), and `edits` (array). Each edit entry includes `status`, `index`, `path`, and `type`. Error entries additionally include `error`, `message`, and contextual fields like `hint` and `closest_matches`.
+5. **Overlapping edit detection**: Overlap detection emits warnings only and does not prevent execution. This is intentional—the tool warns but trusts the caller's intent.
+
+### JSON Output Stability (v1.x Contract)
+
+The JSON output schema is guaranteed stable for all v1.x releases:
+- **No field renames** - existing field names will not change
+- **No field removals** - existing fields will always be present
+- **No type changes** - field types (boolean, number, string, array) are fixed
+- **Additive only** - new optional fields may be added, but never required ones
+
+Breaking changes to JSON output will only occur in v2.0+.
 
 ## Mental Model
 
@@ -117,6 +185,26 @@ Think of `apply-edits` as a transactional patch engine:
 5. **Rollback or Commit** - On failure, restore originals; on success, keep changes
 
 The `read` subcommand supports both `--file` for a single file and `--files` for comma-separated lists, with optional `--max-lines` and `--format` (json or prompt) flags.
+
+## Typical Use Cases
+
+- Applying large, repetitive refactors safely across many files
+- Generating PRs from structured natural-language directives
+- Automating maintenance changes (dependency updates, license headers)
+- Experimenting with multi-agent planning and review workflows
+- CI/CD integration for automated code modifications
+
+## Your First Successful Run
+
+After setup, verify everything works:
+
+✅ `./agent.sh status` shows all required tools installed  
+✅ `./agent.sh dry-run` completes without errors  
+✅ A Pull Request is created in the target repository  
+✅ No files are modified locally during dry-run  
+
+If any step fails, check your environment variables and token permissions.
+
 
 ## Questions
 
