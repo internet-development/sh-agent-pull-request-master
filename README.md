@@ -148,14 +148,14 @@ The agent validates your GitHub token at startup (`./agent.sh status`) with a **
 
 1. **Token presence** - Verifies `GITHUB_TOKEN` is set and non-empty
 2. **Authentication** - Confirms the token authenticates successfully with GitHub API
-3. **OAuth scopes** - For classic tokens, validates that required scopes (`repo` or `public_repo`) are present
+3. **OAuth scopes** - For classic tokens, parses the `X-OAuth-Scopes` response header and validates required scopes (`repo` or `public_repo`) are present
 4. **Repository access** - Checks that the token can read the target repository
 
 If any validation fails, the agent exits immediately with a non-zero status code and a clear error message.
 
 **Token type behavior:**
-- **Classic tokens**: The agent reads the `X-OAuth-Scopes` header and fails fast if `repo` or `public_repo` scope is missing
-- **Fine-grained tokens**: These don't expose scopes via headers, so permissions are enforced by GitHub at operation time
+- **Classic tokens**: The agent reads the `X-OAuth-Scopes` header from the `/user` API response and fails fast if `repo` or `public_repo` scope is missing. A warning is issued if `write:discussion` scope is missing (needed for PR comments).
+- **Fine-grained tokens**: These don't expose scopes via headers, so permissions are enforced by GitHub at operation time. The agent will note this during validation.
 
 **Important limitations:**
 - **Write permissions** for fine-grained tokens are enforced by GitHub when operations are attempted
