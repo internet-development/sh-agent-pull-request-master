@@ -5,7 +5,7 @@
 use apply_edits::edits::EditRequest;
 use apply_edits::output::{
     flush_stderr, print_edit_outcome, print_error, print_header, print_json_result,
-    print_processing_start, print_read_header, print_workdir,
+    print_processing_start, print_read_header, print_summary_with_mode, print_workdir,
 };
 use apply_edits::{read_files, format_files_for_prompt};
 use clap::{Parser, Subcommand};
