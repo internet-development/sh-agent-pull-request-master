@@ -95,7 +95,7 @@ Create a `.env` file with your configuration.
 ```bash
 # At least ONE API key is required (choose your provider)
 API_KEY_ANTHROPIC=...      # For Claude models
-OPENAI_API_KEY=...         # For GPT models (also accepts API_KEY_OPEN_AI)
+OPENAI_API_KEY=...         # For GPT models
 
 # GitHub configuration (all required)
 GITHUB_TOKEN=...           # Token with repo permissions
