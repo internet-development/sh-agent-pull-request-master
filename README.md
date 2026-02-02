@@ -8,7 +8,7 @@ All you need is Bash 3.2, Rust and some API keys.
 
 SH-AGENT-PULL-REQUEST-MASTER is a Bash-driven, multi-persona automation agent that:
 - Reads a single directive written in natural language
-- Coordinates multiple specialized "personas" (research, planning, engineering, review)
+- Coordinates multiple specialized personas (research, planning, engineering, review)
 - Produces a real GitHub Pull Request against a target repository
 
 It is designed for **automated, auditable code changes**, not interactive coding or chat-based assistance.
@@ -35,7 +35,7 @@ This project includes safety features for code editing:
 Think of this project as a **scripted PR author**:
 
 1. You write a single directive describing your goal
-2. The agent decomposes that goal across personas (research, planning, engineering, review)
+2. The agent decomposes that goal across personas: research, planning, engineering, review
 3. Changes are applied safely using a transactional edit engine
 4. A GitHub Pull Request is created and annotated with review feedback
 

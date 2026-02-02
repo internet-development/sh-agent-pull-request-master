@@ -68,7 +68,7 @@ fn test_dry_run_no_filesystem_changes() {
 }
 
 #[test]
-fn test_atomic_mode_rollback_on_failure() {
+fn test_atomic_mode_rolls_back_on_failure() {
     let dir = tempdir().unwrap();
     
     // Create first file that will be modified successfully
