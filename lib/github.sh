@@ -7,7 +7,7 @@
 # Validates that the GitHub token has required scopes by making a test API call.
 # Returns 0 if token has sufficient permissions, 1 otherwise.
 # This enables fail-fast behavior at startup rather than failing mid-operation.
-validate_github_token_scopes() {
+validate_github_token_access() {
     local token="${GITHUB_TOKEN:-}"
     
     if [[ -z "$token" ]]; then
