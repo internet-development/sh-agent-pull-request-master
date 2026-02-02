@@ -260,3 +260,32 @@ pub fn print_warning(message: &str) {
 pub fn flush_stderr() {
     let _ = io::stderr().flush();
 }
+
+// NOTE(angeldev)
+// Prints summary with mode indicators for dry-run and partial modes.
+// Wrapper around print_summary that adds mode-specific messaging.
+pub fn print_summary_with_mode(applied: usize, failed: usize, dry_run: bool, partial: bool) {
+    print_summary(applied, failed);
+    
+    if dry_run {
+        eprintln!("   {}", "(dry-run mode - no files were modified)".dimmed());
+    }
+    if !partial && failed > 0 {
+        eprintln!("   {}", "All changes rolled back due to failure (atomic mode)".dimmed());
+    }
+}
+
+// NOTE(angeldev)
+// Prints summary with mode indicators for dry-run and partial modes.
+// Wrapper around print_summary that adds mode-specific messaging.
+pub fn print_summary_with_mode(applied: usize, failed: usize, dry_run: bool, partial: bool) {
+    print_summary(applied, failed);
+    
+    if dry_run {
+        eprintln!("   {}", "(dry-run mode - no files were modified)".dimmed());
+    }
+    if !partial && failed > 0 {
+        eprintln!("   {}", "All changes rolled back due to failure (atomic mode)".dimmed());
+    }
+    let _ = io::stderr().flush();
+}

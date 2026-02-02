@@ -16,6 +16,7 @@ pub mod transaction;
 pub use edits::{Edit, EditRequest};
 pub use error::{ApplyResult, EditError, EditOutcome, EditResult};
 pub use output::print_summary;
+pub use output::print_summary_with_mode;
 pub use read::{FileReadResult, MultiFileReadResult};
 
 use std::path::Path;
