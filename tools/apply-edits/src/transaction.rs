@@ -67,7 +67,7 @@ impl EditTransaction {
     // NOTE(angeldev)
     // Simulates an edit without writing to disk.
     // Returns Ok if the edit WOULD succeed, Error if it would fail.
-    fn simulate_edit(&self, edit: &Edit, index: usize) -> EditOutcome {
+    pub fn simulate_edit(&self, edit: &Edit, index: usize) -> EditOutcome {
         use crate::edits::{read_file, Edit::*};
         use crate::error::EditError;
         use crate::matcher::{count_occurrences, find_closest_matches, find_line_with_anchor, find_with_normalization, FindResult};
@@ -319,6 +319,14 @@ impl EditTransaction {
     pub fn commit(self) {
         // Just drop self without rolling back
     }
+}
+
+// NOTE(angeldev)
+// Standalone simulate function for use outside of transactions.
+// This is the canonical implementation - all simulation should go through here.
+pub fn simulate_edit(workdir: &Path, edit: &Edit, index: usize) -> EditOutcome {
+    let transaction = EditTransaction::begin(workdir);
+    transaction.simulate_edit(edit, index)
 }
 
 // NOTE(angeldev)

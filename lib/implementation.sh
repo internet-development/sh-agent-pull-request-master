@@ -619,8 +619,18 @@ apply_code_changes() {
         local temp_stdout temp_stderr
         temp_stdout=$(make_temp_file "apply_stdout")
         temp_stderr=$(make_temp_file "apply_stderr")
-        
-        "${ADAPTERS_DIR}/apply-edits.sh" --file "$temp_json_file" --workdir "$TARGET_REPO_PATH" \
+
+        # NOTE(angeldev): Determine edit mode based on ATOMIC_EDITS environment variable.
+        # - ATOMIC_EDITS=true: Use atomic mode (rollback all on any failure)
+        # - ATOMIC_EDITS=false or unset: Use partial mode (keep successful edits, retry failed ones)
+        # Partial mode is the default because it allows the retry mechanism to fix only failed edits.
+        local edit_mode_flag="--partial"
+        if [[ "${ATOMIC_EDITS:-false}" == "true" ]]; then
+            edit_mode_flag="--atomic"
+            log "APPLY" "Using atomic mode (ATOMIC_EDITS=true) - will rollback all on any failure"
+        fi
+
+        "${ADAPTERS_DIR}/apply-edits.sh" apply --file "$temp_json_file" --workdir "$TARGET_REPO_PATH" $edit_mode_flag \
             >"$temp_stdout" 2>"$temp_stderr" || true
         
         apply_json=$(cat "$temp_stdout")
@@ -714,28 +724,26 @@ retry_failed_edits() {
 
 Your previous implementation had ${failed_count} edit(s) that failed to apply.
 
-⚠️ CRITICAL: ATOMIC ROLLBACK OCCURRED
-Because edits failed, ALL changes have been ROLLED BACK. The files are back to their ORIGINAL state.
-- Any content you tried to add (like comments, new code) does NOT exist in the files
-- Do NOT search for content you were trying to add - it was never written
-- The \"Current File Contents\" below shows the ACTUAL current state
+⚠️ NOTE: PARTIAL MODE - Successful edits were preserved
+- Edits that succeeded have been applied and are in the files
+- Only the FAILED edits need to be fixed
+- Do NOT re-output edits that already succeeded
 
 ## Error Details
 
 ${error_details}
 
-## Current File Contents (ACTUAL STATE - your changes were rolled back)
+## Current File Contents (includes successful edits already applied)
 
 ${files_context}
 
 ## Rules for Fixing
 
-1. **FORGET YOUR PREVIOUS CHANGES**: They were rolled back and do not exist
-2. **ONLY USE CONTENT SHOWN ABOVE**: The file contents above are the ONLY truth
-3. **USE THE CLOSEST MATCHES**: Look at the \"Closest matches\" above - copy that EXACT text
-4. **COPY EXACTLY**: Include the exact indentation, spacing, and characters from the file
-5. **USE MORE CONTEXT**: Include 3-5 lines to make the search string unique
-6. **CHECK LINE NUMBERS**: Reference the line numbers above to find the exact location
+1. **ONLY FIX FAILED EDITS**: Successful edits are already applied - do not re-include them
+2. **USE THE CLOSEST MATCHES**: Look at the \"Closest matches\" above - copy that EXACT text
+3. **COPY EXACTLY**: Include the exact indentation, spacing, and characters from the file
+4. **USE MORE CONTEXT**: Include 3-5 lines to make the search string unique
+5. **CHECK LINE NUMBERS**: Reference the line numbers above to find the exact location
 
 ## Output Format
 

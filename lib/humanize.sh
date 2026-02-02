@@ -55,3 +55,30 @@ reset_humanized_comments() {
     touch "$HUMANIZED_COMMENTS_FILE"
     PREVIOUS_HUMANIZED_COMMENTS=""
 }
+
+# NOTE(angeldev)
+# Gets the raw accumulated review feedback for humanization.
+# Returns the cleaned content without formatting - GPT will create a natural reflection.
+# Returns empty string if no comments have been accumulated.
+get_review_summary() {
+    local accumulated
+    accumulated=$(get_accumulated_comments)
+
+    if [[ -z "$accumulated" || "$accumulated" == "---" ]]; then
+        echo ""
+        return 0
+    fi
+
+    # Count the number of feedback entries (separated by ---)
+    local entry_count
+    entry_count=$(echo "$accumulated" | grep -c "^---$" || echo "0")
+    entry_count=$((entry_count / 2))  # Each entry has opening and closing ---
+
+    if [[ $entry_count -eq 0 ]]; then
+        echo ""
+        return 0
+    fi
+
+    # Return cleaned content - GPT will humanize this into a single reflection
+    echo "$accumulated" | sed '/^---$/d' | sed '/^$/d'
+}

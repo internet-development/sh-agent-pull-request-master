@@ -229,9 +229,11 @@ pub fn read_file(workdir: &Path, path: &str) -> EditResult<String> {
 }
 
 // NOTE(angeldev)
-// Reads a large file using memory-mapped I/O.
+// Reads a large file using memory-mapped I/O with file locking.
 // More memory-efficient for files over 100KB as it doesn't load the entire file into memory at once.
+// Uses shared (read) lock to prevent concurrent modifications during the read.
 fn read_file_mmap(workdir: &Path, path: &str) -> EditResult<String> {
+    use fs2::FileExt;
     use memmap2::Mmap;
     use std::fs::File;
 
@@ -242,8 +244,16 @@ fn read_file_mmap(workdir: &Path, path: &str) -> EditResult<String> {
         reason: e.to_string(),
     })?;
 
-    // SAFETY: We're only reading, and the file won't change during our operation
-    // In a production system with concurrent access, this would need more care
+    // NOTE(angeldev): Acquire a shared (read) lock to prevent other processes from
+    // modifying the file while we're reading it. This ensures memory-map safety.
+    // The lock is automatically released when the file handle is dropped.
+    file.lock_shared().map_err(|e| EditError::ReadError {
+        path: path.to_string(),
+        reason: format!("Failed to acquire read lock: {}", e),
+    })?;
+
+    // SAFETY: We hold a shared lock, so no other process can modify the file
+    // while we have it memory-mapped. The lock prevents concurrent writes.
     let mmap = unsafe {
         Mmap::map(&file).map_err(|e| EditError::ReadError {
             path: path.to_string(),
@@ -251,13 +261,17 @@ fn read_file_mmap(workdir: &Path, path: &str) -> EditResult<String> {
         })?
     };
 
-    // Convert to string
-    std::str::from_utf8(&mmap)
+    // Convert to string (lock is still held via the file handle)
+    let content = std::str::from_utf8(&mmap)
         .map(|s| s.to_string())
         .map_err(|e| EditError::ReadError {
             path: path.to_string(),
             reason: format!("File is not valid UTF-8: {}", e),
-        })
+        })?;
+
+    // NOTE(angeldev): Lock is automatically released when file is dropped here
+    // We return the owned String, so the mmap and file can be safely dropped
+    Ok(content)
 }
 
 // NOTE(jimmylee)

@@ -424,10 +424,12 @@ process_persona_review_cycle() {
             log_success "REVIEW" "${persona_display}: $decision - $review_summary"
         fi
         
-        log "GITHUB" "Posting ${persona_display} review comment..."
+        # NOTE(angeldev): Accumulate humanized comments locally instead of posting each one.
+        # A single summary will be posted at the end of all iteration loops for cleaner PRs.
+        log "REVIEW" "Accumulating ${persona_display} review feedback..."
         local comment_output
-        comment_output=$("${ADAPTERS_DIR}/github-comment-pr.sh" "$pr_number" "$review_comment" --previous-comments "$previous_comments" 2>&1) || true
-        
+        comment_output=$("${ADAPTERS_DIR}/github-comment-pr.sh" "$pr_number" "$review_comment" --previous-comments "$previous_comments" --no-post 2>&1) || true
+
         local humanized_comment
         humanized_comment=$(echo "$comment_output" | sed -n '/HUMANIZED_COMMENT:/,/^---$/p' | sed '1d;$d')
         if [[ -n "$humanized_comment" ]]; then
@@ -467,8 +469,17 @@ process_persona_review_cycle() {
             continue
         fi
         
+        # NOTE(angeldev): Accumulate synthesis comment instead of posting immediately.
+        # All feedback will be consolidated into a single summary comment at the end.
         local synthesis_comment="Looking at this more carefully, here's what I need to address: ${synthesized_prompt}"
-        "${ADAPTERS_DIR}/github-comment-pr.sh" "$pr_number" "$synthesis_comment" --previous-comments "$PREVIOUS_HUMANIZED_COMMENTS" 2>&1 || true
+        local synthesis_output
+        synthesis_output=$("${ADAPTERS_DIR}/github-comment-pr.sh" "$pr_number" "$synthesis_comment" --previous-comments "$PREVIOUS_HUMANIZED_COMMENTS" --no-post 2>&1) || true
+
+        local humanized_synthesis
+        humanized_synthesis=$(echo "$synthesis_output" | sed -n '/HUMANIZED_COMMENT:/,/^---$/p' | sed '1d;$d')
+        if [[ -n "$humanized_synthesis" ]]; then
+            append_humanized_comment "$humanized_synthesis"
+        fi
         
         log "ENGINEER" "Addressing ${persona_display} feedback..."
 

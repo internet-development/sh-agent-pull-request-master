@@ -86,6 +86,96 @@ fn group_edits_by_file(edits: &[Edit]) -> std::collections::HashMap<String, Vec<
 }
 
 // NOTE(angeldev)
+// Detects potentially overlapping edits that could cause conflicts.
+// Returns a list of warnings for edit pairs that may conflict.
+pub fn detect_overlapping_edits(edits: &[Edit]) -> Vec<String> {
+    let mut warnings = Vec::new();
+    let groups = group_edits_by_file(edits);
+
+    for (path, file_edits) in &groups {
+        if file_edits.len() < 2 {
+            continue;
+        }
+
+        // Check each pair of edits to the same file
+        for i in 0..file_edits.len() {
+            for j in (i + 1)..file_edits.len() {
+                let (idx_a, edit_a) = &file_edits[i];
+                let (idx_b, edit_b) = &file_edits[j];
+
+                if let Some(warning) = check_edit_conflict(edit_a, edit_b, path, *idx_a, *idx_b) {
+                    warnings.push(warning);
+                }
+            }
+        }
+    }
+
+    warnings
+}
+
+// NOTE(angeldev)
+// Checks if two edits to the same file might conflict.
+fn check_edit_conflict(edit_a: &Edit, edit_b: &Edit, path: &str, idx_a: usize, idx_b: usize) -> Option<String> {
+    use Edit::*;
+
+    match (edit_a, edit_b) {
+        // Two replace operations with overlapping search strings
+        (Replace { search: search_a, .. }, Replace { search: search_b, .. }) |
+        (Replace { search: search_a, .. }, ReplaceAll { search: search_b, .. }) |
+        (ReplaceAll { search: search_a, .. }, Replace { search: search_b, .. }) |
+        (ReplaceAll { search: search_a, .. }, ReplaceAll { search: search_b, .. }) => {
+            // Check if one search string contains the other (potential overlap)
+            if search_a.contains(search_b.as_str()) || search_b.contains(search_a.as_str()) {
+                return Some(format!(
+                    "Warning: Edits {} and {} in '{}' have overlapping search strings - edit {} may fail after edit {} modifies the content",
+                    idx_a + 1, idx_b + 1, path, idx_b + 1, idx_a + 1
+                ));
+            }
+        }
+
+        // Delete file followed by any other operation
+        (DeleteFile { .. }, _) => {
+            return Some(format!(
+                "Warning: Edit {} deletes '{}' but edit {} also targets this file - edit {} will fail",
+                idx_a + 1, path, idx_b + 1, idx_b + 1
+            ));
+        }
+        (_, DeleteFile { .. }) => {
+            return Some(format!(
+                "Warning: Edit {} deletes '{}' but edit {} also targets this file - edit {} will fail",
+                idx_b + 1, path, idx_a + 1, idx_b + 1
+            ));
+        }
+
+        // InsertAtLine operations at the same line
+        (InsertAtLine { line: line_a, .. }, InsertAtLine { line: line_b, .. }) => {
+            if line_a == line_b {
+                return Some(format!(
+                    "Warning: Edits {} and {} both insert at line {} in '{}' - second insert will be offset",
+                    idx_a + 1, idx_b + 1, line_a, path
+                ));
+            }
+        }
+
+        // DeleteLines that overlap
+        (DeleteLines { start_line: start_a, end_line: end_a, .. },
+         DeleteLines { start_line: start_b, end_line: end_b, .. }) => {
+            // Check for overlapping ranges
+            if start_a <= end_b && start_b <= end_a {
+                return Some(format!(
+                    "Warning: Edits {} (lines {}-{}) and {} (lines {}-{}) in '{}' have overlapping delete ranges",
+                    idx_a + 1, start_a, end_a, idx_b + 1, start_b, end_b, path
+                ));
+            }
+        }
+
+        _ => {}
+    }
+
+    None
+}
+
+// NOTE(angeldev)
 // Applies edits with batch optimization.
 // Groups edits by file, reads each file once, applies all edits, writes once.
 fn apply_edits_batched(
@@ -97,6 +187,13 @@ fn apply_edits_batched(
     use std::collections::HashMap;
 
     let mut result = ApplyResult::new();
+
+    // NOTE(angeldev): Check for potentially conflicting edits and warn
+    let warnings = detect_overlapping_edits(edits);
+    for warning in &warnings {
+        eprintln!("⚠️  {}", warning);
+    }
+
     let groups = group_edits_by_file(edits);
 
     // Track original file contents for rollback
@@ -162,140 +259,9 @@ fn apply_edits_batched(
 
 // NOTE(angeldev)
 // Simulates an edit without writing to disk (for dry-run mode in batched processing).
+// Delegates to the canonical implementation in transaction module.
 fn simulate_edit(workdir: &Path, edit: &Edit, index: usize) -> EditOutcome {
-    use crate::edits::read_file;
-    use crate::matcher::{count_occurrences, find_line_with_anchor, find_with_normalization, FindResult};
-
-    let path = edit.path();
-    let edit_type = edit.type_name();
-
-    match edit {
-        Edit::Replace { search, .. } | Edit::ReplaceAll { search, .. } => {
-            match read_file(workdir, path) {
-                Ok(content) => {
-                    let count = count_occurrences(&content, search);
-                    if count > 0 {
-                        EditOutcome::ok_with_details(
-                            index,
-                            path,
-                            edit_type,
-                            None,
-                            Some(format!("Would replace {} occurrence(s) (dry-run)", count)),
-                        )
-                    } else {
-                        match find_with_normalization(&content, search) {
-                            FindResult::NormalizedMatch { line_number, .. } => {
-                                EditOutcome::ok_with_details(
-                                    index,
-                                    path,
-                                    edit_type,
-                                    None,
-                                    Some(format!("Would replace with indent adjust at line {} (dry-run)", line_number)),
-                                )
-                            }
-                            _ => {
-                                let closest = crate::matcher::find_closest_matches(&content, search, 0.5, 3);
-                                EditOutcome::from_error(
-                                    index,
-                                    path,
-                                    edit_type,
-                                    &EditError::SearchNotFound {
-                                        path: path.to_string(),
-                                        search_preview: search.chars().take(200).collect(),
-                                        closest_matches: closest,
-                                    },
-                                )
-                            }
-                        }
-                    }
-                }
-                Err(e) => EditOutcome::from_error(index, path, edit_type, &e),
-            }
-        }
-
-        Edit::InsertAfter { anchor, .. } | Edit::InsertBefore { anchor, .. } => {
-            match read_file(workdir, path) {
-                Ok(content) => {
-                    if find_line_with_anchor(&content, anchor).is_some() {
-                        EditOutcome::ok_with_details(
-                            index,
-                            path,
-                            edit_type,
-                            None,
-                            Some("Would insert content (dry-run)".to_string()),
-                        )
-                    } else {
-                        let closest = crate::matcher::find_closest_matches(&content, anchor, 0.5, 3);
-                        EditOutcome::from_error(
-                            index,
-                            path,
-                            edit_type,
-                            &EditError::AnchorNotFound {
-                                path: path.to_string(),
-                                anchor_preview: anchor.chars().take(200).collect(),
-                                closest_matches: closest,
-                            },
-                        )
-                    }
-                }
-                Err(e) => EditOutcome::from_error(index, path, edit_type, &e),
-            }
-        }
-
-        Edit::Create { .. } => {
-            let full_path = workdir.join(path);
-            if full_path.exists() {
-                EditOutcome::ok_with_details(
-                    index,
-                    path,
-                    edit_type,
-                    None,
-                    Some("Would overwrite file (dry-run)".to_string()),
-                )
-            } else {
-                EditOutcome::ok_with_details(
-                    index,
-                    path,
-                    edit_type,
-                    None,
-                    Some("Would create file (dry-run)".to_string()),
-                )
-            }
-        }
-
-        Edit::DeleteFile { .. } => {
-            let full_path = workdir.join(path);
-            if full_path.exists() {
-                EditOutcome::ok_with_details(
-                    index,
-                    path,
-                    edit_type,
-                    None,
-                    Some("Would delete file (dry-run)".to_string()),
-                )
-            } else {
-                EditOutcome::from_error(
-                    index,
-                    path,
-                    edit_type,
-                    &EditError::FileNotFound {
-                        path: path.to_string(),
-                    },
-                )
-            }
-        }
-
-        _ => {
-            // For other edit types, assume success in dry-run
-            EditOutcome::ok_with_details(
-                index,
-                path,
-                edit_type,
-                None,
-                Some(format!("Would apply {} (dry-run)", edit_type)),
-            )
-        }
-    }
+    transaction::simulate_edit(workdir, edit, index)
 }
 
 // NOTE(jimmylee)

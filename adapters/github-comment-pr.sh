@@ -58,6 +58,7 @@ shift 2
 PERSONA=""
 SKIP_HUMANIZE=false
 PREVIOUS_COMMENTS=""
+NO_POST=false
 
 # NOTE(jimmylee)
 # Parse optional flags for persona, humanization control, and previous comments.
@@ -74,6 +75,12 @@ while [[ $# -gt 0 ]]; do
         --previous-comments)
             PREVIOUS_COMMENTS="$2"
             shift 2
+            ;;
+        --no-post)
+            # NOTE(angeldev): Humanize only, don't post to GitHub.
+            # Used during iteration loops to accumulate comments for a single summary at the end.
+            NO_POST=true
+            shift
             ;;
         *)
             echo "Unknown option: $1" >&2
@@ -117,6 +124,15 @@ if [[ "$SKIP_HUMANIZE" == "false" && "$HUMANIZE_AVAILABLE" == "true" ]]; then
     fi
 elif [[ "$SKIP_HUMANIZE" == "true" ]]; then
     echo "Humanization explicitly skipped"
+fi
+
+# NOTE(angeldev)
+# If --no-post flag is set, skip posting to GitHub and just return the humanized comment.
+# This is used during iteration loops to accumulate comments for a single summary post at the end.
+if [[ "$NO_POST" == "true" ]]; then
+    echo "NO_POST mode - comment humanized but not posted to GitHub"
+    echo "SUCCESS: Comment processed (no-post mode)"
+    exit 0
 fi
 
 # NOTE(jimmylee)

@@ -793,7 +793,15 @@ ${model_attribution}
             local director_comment
             director_comment=$(echo "$director_json" | jq -r '.comment // .review // .summary // "Approved"' 2>/dev/null)
 
-            "${ADAPTERS_DIR}/github-comment-pr.sh" "$pr_number" "$director_comment" --previous-comments "$(get_accumulated_comments)" 2>&1 || true
+            # NOTE(angeldev): Accumulate Director's comment instead of posting immediately.
+            # All feedback will be consolidated into a single summary comment at the end.
+            local director_output
+            director_output=$("${ADAPTERS_DIR}/github-comment-pr.sh" "$pr_number" "$director_comment" --previous-comments "$(get_accumulated_comments)" --no-post 2>&1) || true
+            local humanized_director
+            humanized_director=$(echo "$director_output" | sed -n '/HUMANIZED_COMMENT:/,/^---$/p' | sed '1d;$d')
+            if [[ -n "$humanized_director" ]]; then
+                append_humanized_comment "$humanized_director"
+            fi
 
             if [[ "$director_decision" == "APPROVE" ]]; then
                 all_approved=true
@@ -828,7 +836,22 @@ ${model_attribution}
             log "INFO" "Starting next review cycle with updated code..."
         fi
     done
-    
+
+    # NOTE(angeldev): Post consolidated review summary as a single humanized reflection.
+    # This replaces multiple individual comments during iteration for cleaner PRs.
+    # The summary is piped through GPT to create a natural, cohesive reflection.
+    local review_summary
+    review_summary=$(get_review_summary)
+    if [[ -n "$review_summary" ]]; then
+        log "GITHUB" "Creating consolidated review reflection for PR #$pr_number..."
+        local summary_output
+        if summary_output=$("${ADAPTERS_DIR}/github-comment-pr.sh" "$pr_number" "$review_summary" 2>&1); then
+            log_success "GITHUB" "Posted review reflection"
+        else
+            log_warning "GITHUB" "Failed to post review reflection: $summary_output"
+        fi
+    fi
+
     log_phase "COMPLETE"
     
     if [[ "$all_approved" == "true" ]]; then

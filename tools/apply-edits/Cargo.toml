@@ -31,6 +31,10 @@ thiserror = "1.0"
 # memmap2: Memory-mapped file I/O for large files
 memmap2 = "0.9"
 
+# NOTE(angeldev)
+# fs2: Cross-platform file locking for safe concurrent access
+fs2 = "0.4"
+
 [profile.release]
 # NOTE(jimmylee)
 # Optimize for speed and small binary size
