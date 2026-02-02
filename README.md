@@ -110,11 +110,13 @@ The following behaviors are guaranteed and tested:
 
 Think of `apply-edits` as a transactional patch engine:
 
-1. **Read** - Load files that will be modified
+1. **Read** - Load files that will be modified (use `apply-edits read --file <path> --workdir .` to inspect files)
 2. **Validate** - Check that all search strings and anchors exist exactly as specified
 3. **Backup** - Store original content for potential rollback
 4. **Apply** - Execute edits in order
 5. **Rollback or Commit** - On failure, restore originals; on success, keep changes
+
+The `read` subcommand supports both `--file` for a single file and `--files` for comma-separated lists, with optional `--max-lines` and `--format` (json or prompt) flags.
 
 ## Questions
 
