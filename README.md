@@ -142,7 +142,21 @@ Your `GITHUB_TOKEN` needs these permissions on the target repository:
 
 If working on a public repo you don't own, you'll need to fork it first and set `GITHUB_REPO_AGENTS_WILL_WORK_ON` to your fork.
 
-**Note:** The agent validates GitHub token presence and repository access at startup. If the token is missing, invalid, or cannot access the target repository, the agent will report an error during `./agent.sh status`. This validation confirms authentication and repository visibility only—specific permission errors (e.g., insufficient write access) will occur at operation time when pushing commits or creating PRs.
+### Token Validation
+
+The agent validates your GitHub token at startup (`./agent.sh status`) with a **fail-fast** approach:
+
+1. **Token presence** - Verifies `GITHUB_TOKEN` is set and non-empty
+2. **Authentication** - Confirms the token authenticates successfully with GitHub API
+3. **Repository access** - Checks that the token can read the target repository
+
+If any validation fails, the agent exits immediately with a non-zero status code.
+
+**Important limitations:**
+- This validation confirms **authentication and repository visibility only**
+- **Write permissions** (push, create PR) are enforced by GitHub at operation time
+- **Fine-grained token permissions** cannot be introspected via API—GitHub enforces them when operations are attempted
+- If you see "permission denied" errors during `git push` or PR creation, verify your token has the required write permissions
 
 ## Safety Guarantees
 
