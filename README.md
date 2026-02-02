@@ -122,7 +122,7 @@ GITHUB_REPO_AGENTS_WILL_WORK_ON=internet-development/nextjs-sass-starter
 ## Prerequisites
 
 - `bash` (3.2+)
-- `rust` for the Engineer
+- `rust` (1.70+) for the Engineer
 - `curl` for API requests (standard on macOS/Linux)
 - `git` for version control operations
 - `jq` for JSON parsing (required)
@@ -141,6 +141,8 @@ Your `GITHUB_TOKEN` needs these permissions on the target repository:
 - `metadata: read` - Basic repository access
 
 If working on a public repo you don't own, you'll need to fork it first and set `GITHUB_REPO_AGENTS_WILL_WORK_ON` to your fork.
+
+**Note:** The agent validates GitHub token presence at startup. If the token is missing or the `GITHUB_TOKEN` environment variable is unset, the agent will report an error during `./agent.sh status`. However, token scope validation (whether the token has the required permissions) occurs when GitHub API calls are made, and errors will be reported at that time.
 
 ## Safety Guarantees
 
