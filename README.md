@@ -88,6 +88,36 @@ Your `GITHUB_TOKEN` needs these permissions on the target repository:
 
 If working on a public repo you don't own, you'll need to fork it first and set `GITHUB_REPO_AGENTS_WILL_WORK_ON` to your fork.
 
+## Safety Guarantees
+
+The `apply-edits` tool provides strong safety guarantees by default:
+
+- **Atomic Mode (default)**: All edits succeed or none are applied. If any edit fails, all changes are rolled back automatically.
+- **No Partial Corruption**: Your repository is never left in an inconsistent state.
+- **Dry-Run Mode**: Simulate all changes without touching disk using `--dry-run`. Validates that all edits would succeed before any changes are made.
+- **Partial Mode (opt-in)**: Use `--partial` to continue applying edits even if some fail (non-atomic).
+
+### Behavior Clarifications (v1.x)
+
+The following behaviors are guaranteed for all v1.x releases and are backward compatible with previous v1 releases. These guarantees are enforced by integration tests (see `tools/apply-edits/src/` test modules):
+
+1. **Dry-run validation**: `--dry-run` performs full validation of all edits against actual file contents. It reports exactly what would happen without modifying any files.
+2. **Atomic rollback**: In default (atomic) mode, if edit N fails, all previously successful edits (1 through N-1) are rolled back to their original state.
+3. **Partial continuation**: With `--partial`, failed edits are skipped but successful edits are preserved. The exit code is non-zero if any edit fails.
+4. **JSON output stability**: The JSON output schema includes `success` (boolean), `applied` (number), `failed` (number), and `edits` (array). Each edit entry includes `status`, `index`, `path`, and `type`. Error entries additionally include `error`, `message`, and contextual fields like `hint` and `closest_matches`.
+
+## Mental Model
+
+Think of `apply-edits` as a transactional patch engine:
+
+1. **Read** - Load files that will be modified (use `apply-edits read --file <path> --workdir .` to inspect files)
+2. **Validate** - Check that all search strings and anchors exist exactly as specified
+3. **Backup** - Store original content for potential rollback
+4. **Apply** - Execute edits in order
+5. **Rollback or Commit** - On failure, restore originals; on success, keep changes
+
+The `read` subcommand supports both `--file` for a single file and `--files` for comma-separated lists, with optional `--max-lines` and `--format` (json or prompt) flags.
+
 ## Questions
 
 If you have questions ping me on Twitter, [@wwwjim](https://www.twitter.com/wwwjim). Or you can ping [@internetxstudio](https://x.com/internetxstudio).

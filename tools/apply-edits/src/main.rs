@@ -5,7 +5,7 @@
 use apply_edits::edits::EditRequest;
 use apply_edits::output::{
     flush_stderr, print_edit_outcome, print_error, print_header, print_json_result,
-    print_processing_start, print_read_header, print_workdir,
+    print_processing_start, print_read_header, print_summary_with_mode, print_workdir,
 };
 use apply_edits::{read_files, format_files_for_prompt};
 use clap::{Parser, Subcommand};
@@ -103,11 +103,14 @@ fn run_apply(file: Option<PathBuf>, stdin: bool, workdir: PathBuf, dry_run: bool
 
     if dry_run {
         eprintln!("🔍 DRY-RUN MODE: No files will be modified");
+        eprintln!("   Validating edits against current file contents...");
     }
     if partial {
         eprintln!("⚠️  PARTIAL MODE: Continuing on errors (non-atomic)");
+        eprintln!("   Some edits may succeed while others fail");
     } else {
         eprintln!("🔒 ATOMIC MODE: Any failure will roll back all changes");
+        eprintln!("   All-or-nothing execution guarantees consistency");
     }
 
     // Read JSON input
@@ -159,12 +162,19 @@ fn run_apply(file: Option<PathBuf>, stdin: bool, workdir: PathBuf, dry_run: bool
     // Print summary
     let mode_suffix = if dry_run { " (dry-run)" } else { "" };
     eprintln!();
+    eprintln!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     if result.success {
-        eprintln!("✅ {} edit(s) applied{}, {} failed", result.applied, mode_suffix, result.failed);
+        eprintln!("✅ RESULT: {} edit(s) applied{}, {} failed", result.applied, mode_suffix, result.failed);
+        if dry_run {
+            eprintln!("   All edits validated successfully - safe to run without --dry-run");
+        }
     } else {
-        eprintln!("❌ {} edit(s) applied{}, {} failed", result.applied, mode_suffix, result.failed);
-        if !partial && result.failed > 0 {
+        eprintln!("❌ RESULT: {} edit(s) applied{}, {} failed", result.applied, mode_suffix, result.failed);
+        if !partial && result.failed > 0 && !dry_run {
             eprintln!("   All changes rolled back due to failure (atomic mode)");
+            eprintln!("   Repository state unchanged - no partial modifications");
+        } else if dry_run {
+            eprintln!("   Fix the failing edits before running without --dry-run");
         }
     }
     flush_stderr();

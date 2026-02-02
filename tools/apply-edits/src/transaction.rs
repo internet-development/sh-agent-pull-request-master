@@ -255,13 +255,13 @@ impl EditTransaction {
                 match read_file(&self.workdir, path) {
                     Ok(content) => {
                         let count = content.lines().filter(|l| l.contains(search)).count();
-                        EditOutcome::ok_with_details(
-                            index,
-                            path,
-                            edit_type,
-                            None,
-                            Some(format!("Would delete {} matching line(s) (dry-run)", count)),
-                        )
+                            EditOutcome::ok_with_details(
+                                index,
+                                path,
+                                edit_type,
+                                None,
+                                Some(format!("Would delete {} matching line(s) (dry-run)", count)),
+                            )
                     }
                     Err(e) => EditOutcome::from_error(index, path, edit_type, &e),
                 }

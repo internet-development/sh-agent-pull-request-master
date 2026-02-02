@@ -127,21 +127,31 @@ pub fn print_edit_error(
 
 // NOTE(jimmylee)
 // Prints the summary line to stderr.
-pub fn print_summary(applied: usize, failed: usize) {
+pub fn print_summary(applied: usize, failed: usize, dry_run: bool, partial: bool) {
     eprintln!();
     eprintln!("{}", "━".repeat(50).dimmed());
 
+    let mode_info = if dry_run {
+        " (dry-run)".dimmed().to_string()
+    } else if partial {
+        " (partial)".yellow().to_string()
+    } else {
+        " (atomic)".green().to_string()
+    };
+
     if failed == 0 {
         eprintln!(
-            "{} {} applied, {} failed",
-            "SUMMARY:".bold(),
+            "{}{} {} applied, {} failed",
+            "SUMMARY".bold(),
+            mode_info,
             applied.to_string().green().bold(),
             failed.to_string().green()
         );
     } else {
         eprintln!(
-            "{} {} applied, {} failed",
-            "SUMMARY:".bold(),
+            "{}{} {} applied, {} failed",
+            "SUMMARY".bold(),
+            mode_info,
             applied.to_string().yellow(),
             failed.to_string().red().bold()
         );
@@ -248,5 +258,34 @@ pub fn print_warning(message: &str) {
 // NOTE(jimmylee)
 // Flushes stderr to ensure all output is visible.
 pub fn flush_stderr() {
+    let _ = io::stderr().flush();
+}
+
+// NOTE(angeldev)
+// Prints summary with mode indicators for dry-run and partial modes.
+// Wrapper around print_summary that adds mode-specific messaging.
+pub fn print_summary_with_mode(applied: usize, failed: usize, dry_run: bool, partial: bool) {
+    print_summary(applied, failed);
+    
+    if dry_run {
+        eprintln!("   {}", "(dry-run mode - no files were modified)".dimmed());
+    }
+    if !partial && failed > 0 {
+        eprintln!("   {}", "All changes rolled back due to failure (atomic mode)".dimmed());
+    }
+}
+
+// NOTE(angeldev)
+// Prints summary with mode indicators for dry-run and partial modes.
+// Wrapper around print_summary that adds mode-specific messaging.
+pub fn print_summary_with_mode(applied: usize, failed: usize, dry_run: bool, partial: bool) {
+    print_summary(applied, failed);
+    
+    if dry_run {
+        eprintln!("   {}", "(dry-run mode - no files were modified)".dimmed());
+    }
+    if !partial && failed > 0 {
+        eprintln!("   {}", "All changes rolled back due to failure (atomic mode)".dimmed());
+    }
     let _ = io::stderr().flush();
 }
