@@ -111,7 +111,7 @@ The following behaviors are guaranteed and tested:
 Think of `apply-edits` as a transactional patch engine:
 
 1. **Read** - Load files that will be modified
-2. **Validate** - Check that all search strings and anchors exist
+2. **Validate** - Check that all search strings and anchors exist exactly as specified
 3. **Backup** - Store original content for potential rollback
 4. **Apply** - Execute edits in order
 5. **Rollback or Commit** - On failure, restore originals; on success, keep changes
