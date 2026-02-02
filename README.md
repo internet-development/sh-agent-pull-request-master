@@ -6,7 +6,7 @@ All you need is Bash 3.2, Rust and some API keys.
 
 ## What This Project Is
 
-SH-AGENT-PULL-REQUEST-MASTER is a Bash-driven, multi-persona automation agent that:
+sh-agent-pull-request-master is a Bash-driven, multi-persona automation agent that:
 - Reads a single directive written in natural language
 - Coordinates multiple specialized personas (research, planning, engineering, review)
 - Produces a real GitHub Pull Request against a target repository
