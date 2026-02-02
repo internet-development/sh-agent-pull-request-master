@@ -142,7 +142,7 @@ Your `GITHUB_TOKEN` needs these permissions on the target repository:
 
 If working on a public repo you don't own, you'll need to fork it first and set `GITHUB_REPO_AGENTS_WILL_WORK_ON` to your fork.
 
-**Note:** The agent validates GitHub token presence at startup. If the token is missing or the `GITHUB_TOKEN` environment variable is unset, the agent will report an error during `./agent.sh status`. Token scope validation is performed by making a test API call to verify the token has required permissions before proceeding with operations.
+**Note:** The agent validates GitHub token presence and repository access at startup. If the token is missing, invalid, or cannot access the target repository, the agent will report an error during `./agent.sh status`. This validation confirms authentication and repository visibility only—specific permission errors (e.g., insufficient write access) will occur at operation time when pushing commits or creating PRs.
 
 ## Safety Guarantees
 
