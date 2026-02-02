@@ -15,6 +15,7 @@ pub mod transaction;
 // Re-export commonly used types for convenience.
 pub use edits::{Edit, EditRequest};
 pub use error::{ApplyResult, EditError, EditOutcome, EditResult};
+pub use output::print_summary;
 pub use read::{FileReadResult, MultiFileReadResult};
 
 use std::path::Path;

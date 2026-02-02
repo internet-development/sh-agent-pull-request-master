@@ -127,21 +127,31 @@ pub fn print_edit_error(
 
 // NOTE(jimmylee)
 // Prints the summary line to stderr.
-pub fn print_summary(applied: usize, failed: usize) {
+pub fn print_summary(applied: usize, failed: usize, dry_run: bool, partial: bool) {
     eprintln!();
     eprintln!("{}", "━".repeat(50).dimmed());
 
+    let mode_info = if dry_run {
+        " (dry-run)".dimmed().to_string()
+    } else if partial {
+        " (partial)".yellow().to_string()
+    } else {
+        " (atomic)".green().to_string()
+    };
+
     if failed == 0 {
         eprintln!(
-            "{} {} applied, {} failed",
-            "SUMMARY:".bold(),
+            "{}{} {} applied, {} failed",
+            "SUMMARY".bold(),
+            mode_info,
             applied.to_string().green().bold(),
             failed.to_string().green()
         );
     } else {
         eprintln!(
-            "{} {} applied, {} failed",
-            "SUMMARY:".bold(),
+            "{}{} {} applied, {} failed",
+            "SUMMARY".bold(),
+            mode_info,
             applied.to_string().yellow(),
             failed.to_string().red().bold()
         );

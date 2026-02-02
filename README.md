@@ -88,6 +88,25 @@ Your `GITHUB_TOKEN` needs these permissions on the target repository:
 
 If working on a public repo you don't own, you'll need to fork it first and set `GITHUB_REPO_AGENTS_WILL_WORK_ON` to your fork.
 
+## Safety Guarantees
+
+The `apply-edits` tool provides strong safety guarantees by default:
+
+- **Atomic Mode (default)**: All edits succeed or none are applied. If any edit fails, all changes are rolled back automatically.
+- **No Partial Corruption**: Your repository is never left in an inconsistent state.
+- **Dry-Run Mode**: Simulate all changes without touching disk using `--dry-run`.
+- **Partial Mode (opt-in)**: Use `--partial` to continue applying edits even if some fail (non-atomic).
+
+## Mental Model
+
+Think of `apply-edits` as a transactional patch engine:
+
+1. **Read** - Load files that will be modified
+2. **Validate** - Check that all search strings and anchors exist
+3. **Backup** - Store original content for potential rollback
+4. **Apply** - Execute edits in order
+5. **Rollback or Commit** - On failure, restore originals; on success, keep changes
+
 ## Questions
 
 If you have questions ping me on Twitter, [@wwwjim](https://www.twitter.com/wwwjim). Or you can ping [@internetxstudio](https://x.com/internetxstudio).

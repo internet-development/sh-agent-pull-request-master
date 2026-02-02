@@ -242,23 +242,25 @@ fn error_code(error: &EditError) -> String {
 // Generates a helpful hint based on closest matches found.
 fn generate_hint_for_search_not_found(closest_matches: &[ClosestMatch]) -> String {
     if closest_matches.is_empty() {
-        return "No similar content found. The file may have changed significantly.".to_string();
+        return "No similar content found. The file may have changed significantly. Try using 'apply-edits read' to inspect current file contents.".to_string();
     }
 
     let best_match = &closest_matches[0];
     if best_match.similarity > 0.9 {
         format!(
-            "Very close match at line {}. Check for minor differences (whitespace, punctuation).",
-            best_match.line
+            "Very close match at line {} ({}% similar). Check for minor differences in whitespace or indentation. The tool will auto-correct indentation if the content matches.",
+            best_match.line,
+            (best_match.similarity * 100.0) as u32
         )
     } else if best_match.similarity > 0.7 {
         format!(
-            "Similar content found at line {}. The code may have been modified.",
-            best_match.line
+            "Similar content found at line {} ({}% similar). The code may have been modified. Consider re-reading the file with 'apply-edits read'.",
+            best_match.line,
+            (best_match.similarity * 100.0) as u32
         )
     } else {
         format!(
-            "Partial match at line {} ({}% similar). The code structure may have changed.",
+            "Partial match at line {} ({}% similar). The code structure may have changed significantly. Use 'apply-edits read --file <path>' to see current contents.",
             best_match.line,
             (best_match.similarity * 100.0) as u32
         )
