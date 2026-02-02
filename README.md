@@ -22,14 +22,13 @@ It is designed for **automated, auditable code changes**, not interactive coding
 - ❌ A tool that infers intent beyond the explicit directive
 - ❌ A tool that bypasses GitHub permissions
 
-## Safety First
+## Safety Features
 
-This project is designed to be safe by default:
+This project includes safety features for code editing:
 - ✅ All file edits are atomic (all succeed or all roll back)
 - ✅ Dry-run mode validates changes without touching disk
 - ✅ No partial corruption of repositories
 - ✅ Machine-readable JSON output for auditability
-- ✅ Large files (>100KB) handled safely with memory-mapped I/O
 
 ## High-Level Mental Model
 
@@ -143,8 +142,6 @@ Your `GITHUB_TOKEN` needs these permissions on the target repository:
 
 If working on a public repo you don't own, you'll need to fork it first and set `GITHUB_REPO_AGENTS_WILL_WORK_ON` to your fork.
 
-**Token Validation:** The agent validates token scopes on startup. If scopes are insufficient, you'll receive a clear error message explaining which permissions are missing.
-
 ## Safety Guarantees
 
 The `apply-edits` tool provides strong safety guarantees by default:
@@ -154,25 +151,14 @@ The `apply-edits` tool provides strong safety guarantees by default:
 - **Dry-Run Mode**: Simulate all changes without touching disk using `--dry-run`. Validates that all edits would succeed before any changes are made.
 - **Partial Mode (opt-in)**: Use `--partial` to continue applying edits even if some fail (non-atomic).
 
-### Behavior Clarifications (v1.x)
+### Behavior Notes
 
-The following behaviors are guaranteed for all v1.x releases and are backward compatible with previous v1 releases. These guarantees are enforced by integration tests (see `tools/apply-edits/tests/integration_tests.rs`):
+The following behaviors are tested in `tools/apply-edits/tests/integration_tests.rs`:
 
 1. **Dry-run validation**: `--dry-run` performs full validation of all edits against actual file contents. It reports exactly what would happen without modifying any files.
 2. **Atomic rollback**: In default (atomic) mode, if edit N fails, all previously successful edits (1 through N-1) are rolled back to their original state.
 3. **Partial continuation**: With `--partial`, failed edits are skipped but successful edits are preserved. The exit code is non-zero if any edit fails.
-4. **JSON output stability**: The JSON output schema includes `success` (boolean), `applied` (number), `failed` (number), and `edits` (array). Each edit entry includes `status`, `index`, `path`, and `type`. Error entries additionally include `error`, `message`, and contextual fields like `hint` and `closest_matches`.
-5. **Overlapping edit detection**: Overlap detection emits warnings only and does not prevent execution. This is intentional—the tool warns but trusts the caller's intent.
-
-### JSON Output Stability (v1.x Contract)
-
-The JSON output schema is guaranteed stable for all v1.x releases:
-- **No field renames** - existing field names will not change
-- **No field removals** - existing fields will always be present
-- **No type changes** - field types (boolean, number, string, array) are fixed
-- **Additive only** - new optional fields may be added, but never required ones
-
-Breaking changes to JSON output will only occur in v2.0+.
+4. **JSON output**: The JSON output schema includes `success` (boolean), `applied` (number), `failed` (number), and `edits` (array). Each edit entry includes `status`, `index`, `path`, and `type`. Error entries additionally include `error`, `message`, and contextual fields like `hint` and `closest_matches`.
 
 ## Mental Model
 

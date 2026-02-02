@@ -297,3 +297,121 @@ fn test_dry_run_validates_all_edits() {
     let json: serde_json::Value = serde_json::from_str(&stdout).unwrap();
     assert_eq!(json["failed"], 1, "should report 1 failed edit");
 }
+
+#[test]
+fn test_large_file_dry_run_no_modification() {
+    let dir = tempdir().unwrap();
+    let test_file = dir.path().join("large_file.txt");
+    
+    // Create a file larger than 100KB (the LARGE_FILE_THRESHOLD)
+    let line = "This is a line of text that will be repeated many times to create a large file.\n";
+    let large_content: String = line.repeat(2000); // ~160KB
+    assert!(large_content.len() > 100 * 1024, "Test file must be >100KB");
+    
+    fs::write(&test_file, &large_content).unwrap();
+    
+    // Get original metadata for comparison
+    let original_metadata = fs::metadata(&test_file).unwrap();
+    let original_modified = original_metadata.modified().unwrap();
+    
+    // Small delay to ensure filesystem timestamp would change if modified
+    std::thread::sleep(std::time::Duration::from_millis(50));
+    
+    let json_input = r#"{
+        "edits": [
+            {
+                "type": "replace",
+                "path": "large_file.txt",
+                "search": "This is a line of text",
+                "replace": "This is MODIFIED text"
+            }
+        ]
+    }"#;
+    
+    let output = run_apply_edits(dir.path(), json_input, &["--dry-run"]);
+    
+    // Should succeed in dry-run
+    assert!(output.status.success(), "dry-run on large file should succeed");
+    
+    // CRITICAL: File content must be unchanged
+    let after_content = fs::read_to_string(&test_file).unwrap();
+    assert_eq!(after_content, large_content, "dry-run must not modify large file contents");
+    
+    // CRITICAL: File metadata (timestamp) should be unchanged
+    let after_metadata = fs::metadata(&test_file).unwrap();
+    let after_modified = after_metadata.modified().unwrap();
+    assert_eq!(original_modified, after_modified, "dry-run must not change file modification time");
+    
+    // Verify JSON output indicates dry-run success
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let json: serde_json::Value = serde_json::from_str(&stdout).unwrap();
+    assert!(json["success"].as_bool().unwrap(), "JSON should indicate success");
+}
+
+#[test]
+fn test_atomic_rollback_multiple_files() {
+    let dir = tempdir().unwrap();
+    
+    // Create three files that will be modified
+    let file1 = dir.path().join("file1.txt");
+    let file2 = dir.path().join("file2.txt");
+    let file3 = dir.path().join("file3.txt");
+    
+    fs::write(&file1, "file1 original content\n").unwrap();
+    fs::write(&file2, "file2 original content\n").unwrap();
+    fs::write(&file3, "file3 original content\n").unwrap();
+    
+    // First two edits will succeed, third will fail (search not found)
+    // This tests that ALL prior successful edits are rolled back
+    let json_input = r#"{
+        "edits": [
+            {
+                "type": "replace",
+                "path": "file1.txt",
+                "search": "file1 original content",
+                "replace": "file1 MODIFIED content"
+            },
+            {
+                "type": "replace",
+                "path": "file2.txt",
+                "search": "file2 original content",
+                "replace": "file2 MODIFIED content"
+            },
+            {
+                "type": "replace",
+                "path": "file3.txt",
+                "search": "this string does not exist and will cause failure",
+                "replace": "replacement"
+            }
+        ]
+    }"#;
+    
+    // Run in atomic mode (default, no --partial flag)
+    let output = run_apply_edits(dir.path(), json_input, &[]);
+    
+    // Command should fail
+    assert!(!output.status.success(), "atomic mode should fail when any edit fails");
+    
+    // CRITICAL: ALL files should be rolled back to original state
+    let file1_content = fs::read_to_string(&file1).unwrap();
+    let file2_content = fs::read_to_string(&file2).unwrap();
+    let file3_content = fs::read_to_string(&file3).unwrap();
+    
+    assert_eq!(file1_content, "file1 original content\n", 
+        "file1 must be rolled back in atomic mode");
+    assert_eq!(file2_content, "file2 original content\n", 
+        "file2 must be rolled back in atomic mode");
+    assert_eq!(file3_content, "file3 original content\n", 
+        "file3 should be unchanged (edit failed before modification)");
+    
+    // Verify stderr mentions rollback
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("rollback") || stderr.contains("Rollback") || stderr.contains("rolled back") || stderr.contains("Rolling back"),
+        "stderr should mention rollback: {}", stderr);
+    
+    // Verify JSON output shows correct counts
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let json: serde_json::Value = serde_json::from_str(&stdout).unwrap();
+    assert!(!json["success"].as_bool().unwrap(), "success should be false");
+    assert_eq!(json["failed"], 1, "should report 1 failed edit");
+}
