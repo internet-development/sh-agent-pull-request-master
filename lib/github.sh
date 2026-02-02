@@ -3,6 +3,61 @@
 # NOTE(jimmylee)
 # GitHub API utilities using curl. No gh CLI dependency.
 
+# NOTE(jimmylee)
+# Validates that the GitHub token has required scopes by making a test API call.
+# Returns 0 if token has sufficient permissions, 1 otherwise.
+# This enables fail-fast behavior at startup rather than failing mid-operation.
+validate_github_token_scopes() {
+    local token="${GITHUB_TOKEN:-}"
+    
+    if [[ -z "$token" ]]; then
+        echo "ERROR: GITHUB_TOKEN is not set" >&2
+        return 1
+    fi
+    
+    # Test token by fetching current user - this validates basic auth
+    local response
+    local http_code
+    
+    response=$(curl -s -w "\n%{http_code}" \
+        -H "Authorization: token $token" \
+        -H "Accept: application/vnd.github.v3+json" \
+        "https://api.github.com/user" 2>&1)
+    
+    http_code=$(echo "$response" | tail -n1)
+    
+    if [[ "$http_code" != "200" ]]; then
+        echo "ERROR: GitHub token validation failed (HTTP $http_code)" >&2
+        echo "Please ensure your GITHUB_TOKEN has the required scopes:" >&2
+        echo "  - repo (for private repositories)" >&2
+        echo "  - public_repo (for public repositories)" >&2
+        echo "  - write:discussion (for PR comments)" >&2
+        return 1
+    fi
+    
+    # Test repo access if GITHUB_REPO_AGENTS_WILL_WORK_ON is set
+    local repo="${GITHUB_REPO_AGENTS_WILL_WORK_ON:-}"
+    if [[ -n "$repo" ]]; then
+        response=$(curl -s -w "\n%{http_code}" \
+            -H "Authorization: token $token" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/$repo" 2>&1)
+        
+        http_code=$(echo "$response" | tail -n1)
+        
+        if [[ "$http_code" == "404" ]]; then
+            echo "ERROR: Cannot access repository '$repo'" >&2
+            echo "Either the repository doesn't exist or your token lacks 'repo' scope" >&2
+            return 1
+        elif [[ "$http_code" != "200" ]]; then
+            echo "ERROR: Failed to verify repository access (HTTP $http_code)" >&2
+            return 1
+        fi
+    fi
+    
+    return 0
+}
+
 [[ -n "${_GITHUB_SH_LOADED:-}" ]] && return 0
 _GITHUB_SH_LOADED=1
 
